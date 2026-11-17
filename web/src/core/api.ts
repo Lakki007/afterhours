@@ -27,7 +27,7 @@ export function isApiError(e: unknown, code?: string): e is ApiError {
   return e instanceof ApiError && (code === undefined || e.code === code);
 }
 
-type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 async function request<S extends z.ZodType>(method: Method, path: string, schema: S, body?: unknown, signal?: AbortSignal): Promise<z.output<S>> {
   let res: Response;
@@ -35,6 +35,8 @@ async function request<S extends z.ZodType>(method: Method, path: string, schema
     res = await fetch(path, {
       method,
       credentials: 'same-origin',
+      // Fastify rejects content-type: application/json with an empty body, so
+      // bodiless calls send no content-type at all. post/put/patch default to {}.
       headers: body === undefined ? { accept: 'application/json' } : { 'content-type': 'application/json', accept: 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
@@ -70,7 +72,9 @@ async function request<S extends z.ZodType>(method: Method, path: string, schema
 
 export const api = {
   get: <S extends z.ZodType>(path: string, schema: S, signal?: AbortSignal) => request('GET', path, schema, undefined, signal),
+  /** `api.post('/api/hunt/start', undefined, Schema)` is fine: it sends {} so Fastify accepts it. */
   post: <S extends z.ZodType>(path: string, body: unknown, schema: S) => request('POST', path, schema, body ?? {}),
   put: <S extends z.ZodType>(path: string, body: unknown, schema: S) => request('PUT', path, schema, body ?? {}),
+  patch: <S extends z.ZodType>(path: string, body: unknown, schema: S) => request('PATCH', path, schema, body ?? {}),
   del: <S extends z.ZodType>(path: string, schema: S) => request('DELETE', path, schema),
 };

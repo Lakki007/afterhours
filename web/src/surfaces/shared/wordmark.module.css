@@ -1,0 +1,18 @@
+.wordmark { display: grid; gap: 4px; justify-items: start; margin: 0; line-height: 1; }
+.line { display: flex; gap: 5px; align-items: flex-end; }
+.line:nth-child(2) { margin-left: 26px; }
+.letter {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: var(--outline);
+  border-radius: 6px 12px 5px 10px / 10px 5px 12px 6px;
+  box-shadow: var(--shadow);
+  font-family: var(--font-display);
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.letter:active { cursor: grabbing; }
