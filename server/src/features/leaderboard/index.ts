@@ -101,7 +101,7 @@ function snapshotRows(ctx: FeatureContext, st: StateRow): FullRow[] {
   const s = state(ctx);
   const sig = `${st.frozen_at}`;
   if (s.frozen?.sig === sig) return s.frozen.rows;
-  let rows: FullRow[] = [];
+  let rows: FullRow[];
   try {
     rows = st.snapshot ? (JSON.parse(st.snapshot) as FullRow[]) : [];
   } catch {

@@ -469,6 +469,6 @@ function sendCsv(reply: { header: (k: string, v: string) => unknown }, filename:
   void reply.header('content-type', 'text/csv; charset=utf-8');
   void reply.header('content-disposition', `attachment; filename="${filename}"`);
   void reply.header('cache-control', 'no-store');
-  return `﻿${lines.join('\r\n')}\r\n`;
+  return `\uFEFF${lines.join('\r\n')}\r\n`;
 }
 
