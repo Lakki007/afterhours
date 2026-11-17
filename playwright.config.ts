@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4310;
+const PORT = Number(process.env.E2E_PORT ?? 4310);
 
 // e2e runs against the production build served by the real server
 // (npm run build first): same path as the droplet, including the service worker.
