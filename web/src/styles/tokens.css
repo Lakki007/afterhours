@@ -1,0 +1,126 @@
+/*
+  After Hours design tokens: "zine at dusk".
+  The ONLY place colours, fonts, shadows, radii and motion values are defined.
+  Feature CSS uses var(--…) from here and the UI kit; never raw hex.
+*/
+:root {
+  /* ---- paper + ink ---------------------------------------------------- */
+  --paper: #f6e7c8;          /* photocopy cream */
+  --paper-2: #ecd6a6;        /* kraft, for backing sheets and torn edges */
+  --paper-3: #fff8e8;        /* fresh sheet, inputs, sticker die-cut border */
+  --ink: #1d1630;            /* dusk ink: all lines, all body text */
+  --ink-soft: #4a4060;       /* secondary text on paper (7.9:1 on --paper) */
+
+  /* ---- loud blocks (flat, never gradients) ---------------------------- */
+  --tangerine: #ff6a1f;
+  --lime: #c4f03c;
+  --pink: #ff4fa0;
+  --grape: #6b3fe0;
+  --sky: #38b6f2;
+  --sun: #ffd23f;
+
+  /* text that sits on each block (all ≥ 4.5:1) */
+  --on-tangerine: var(--ink);
+  --on-lime: var(--ink);
+  --on-pink: var(--ink);
+  --on-grape: var(--paper-3);
+  --on-sky: var(--ink);
+  --on-sun: var(--ink);
+  --on-ink: var(--paper);
+
+  /* status, expressed in the same palette */
+  --good: var(--lime);
+  --bad: var(--pink);
+  --warn: var(--sun);
+
+  /* ---- dusk (projector + dark surfaces) -------------------------------- */
+  --dusk: #221a3a;
+  --dusk-2: #30264f;
+  --dusk-line: #f6e7c8;
+
+  /* ---- type ------------------------------------------------------------ */
+  --font-display: 'Bowlby One', 'Arial Black', Impact, sans-serif;
+  --font-body: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-hand: 'Shantell Sans', 'Comic Neue', 'Segoe Print', cursive;
+
+  /* modular scale, 1.25 from 16px */
+  --step--1: 0.8125rem;  /* 13 */
+  --step-0: 1rem;        /* 16 body */
+  --step-1: 1.25rem;     /* 20 */
+  --step-2: 1.5625rem;   /* 25 */
+  --step-3: 1.953rem;    /* 31 */
+  --step-4: 2.441rem;    /* 39 */
+  --step-5: 3.052rem;    /* 49 */
+  --step-6: 3.815rem;    /* 61 */
+  --step-7: 4.768rem;    /* 76 */
+
+  /* ---- lines, shadows, radii ------------------------------------------ */
+  --line: 3px;
+  --line-thin: 2px;
+  --line-fat: 4px;
+  --outline: var(--line) solid var(--ink);
+  --shadow-sm: 2px 3px 0 var(--ink);
+  --shadow: 4px 5px 0 var(--ink);
+  --shadow-lg: 7px 8px 0 var(--ink);
+  --shadow-pressed: 1px 1px 0 var(--ink);
+  /* hand-cut corners: deliberately uneven */
+  --cut-1: 14px 20px 12px 18px / 18px 12px 20px 14px;
+  --cut-2: 22px 10px 18px 12px / 12px 20px 10px 22px;
+  --cut-3: 8px 16px 10px 14px / 14px 8px 16px 10px;
+  --cut-round: 48% 52% 50% 50% / 52% 48% 52% 48%;
+
+  /* ---- tilt ----------------------------------------------------------- */
+  --tilt-l: -2.2deg;
+  --tilt-r: 1.8deg;
+  --tilt-l-2: -4deg;
+  --tilt-r-2: 3.5deg;
+
+  /* ---- space ---------------------------------------------------------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --gutter: 18px;
+  --tap: 48px;               /* minimum touch target (spec floor is 44) */
+  --page-max: 520px;         /* attendee column */
+  --nav-h: 76px;
+
+  /* ---- texture -------------------------------------------------------- */
+  --halftone: radial-gradient(circle at center, rgb(29 22 48 / 0.2) 1.1px, transparent 1.6px) 0 0 / 7px 7px;
+  --halftone-light: radial-gradient(circle at center, rgb(255 248 232 / 0.35) 1.1px, transparent 1.6px) 0 0 / 7px 7px;
+
+  /* ---- motion --------------------------------------------------------- */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 420ms;
+
+  /* ---- layers --------------------------------------------------------- */
+  --z-nav: 20;
+  --z-overlay: 40;
+  --z-sheet: 50;
+  --z-toast: 70;
+  --z-celebrate: 80;
+  --z-confetti: 90;
+}
+
+/* Projector / dark surfaces opt in with data-surface="dusk". */
+[data-surface='dusk'] {
+  --page-bg: var(--dusk);
+  --text: var(--paper);
+  --text-soft: #d9cdb2;
+  --halftone: radial-gradient(circle at center, rgb(246 231 200 / 0.12) 1.1px, transparent 1.6px) 0 0 / 9px 9px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 1ms;
+    --dur: 120ms;
+    --dur-slow: 160ms;
+  }
+}
