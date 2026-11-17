@@ -1,0 +1,82 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-celebrate);
+  overflow: auto;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-5);
+  background: var(--sun);
+  border-bottom: var(--outline);
+  flex-wrap: wrap;
+}
+.toolTitle { font-size: var(--step-2); }
+.toolNote { font-family: var(--font-hand); font-weight: 600; max-width: 60ch; }
+.toolBtns { display: flex; gap: var(--s-3); }
+.pages { display: grid; gap: var(--s-6); justify-items: center; padding: var(--s-6) var(--s-4); }
+
+/* an A4 sheet: 210 x 297mm, 8 cards of 95 x 66mm with 8mm margins */
+.page {
+  width: 210mm;
+  height: 297mm;
+  padding: 14mm 8mm;
+  display: grid;
+  grid-template-columns: repeat(2, 95mm);
+  grid-template-rows: repeat(4, 66mm);
+  gap: 0;
+  align-content: center;
+  justify-content: center;
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+  border: var(--outline);
+  break-after: page;
+  page-break-after: always;
+}
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 8mm 1fr 33mm;
+  border: 0.3mm dashed var(--ink);
+  background: var(--paper-3);
+  overflow: hidden;
+}
+.band {
+  display: grid;
+  place-items: center;
+  border-right: 0.5mm solid var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.band span { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--font-display); font-size: 3.4mm; }
+.body { padding: 2.4mm 2.4mm 2mm 3mm; display: grid; align-content: start; gap: 0.6mm; min-width: 0; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 2mm; }
+.logo { height: 6.2mm; width: auto; }
+.event { font-family: var(--font-hand); font-weight: 700; font-size: 2.7mm; text-align: right; line-height: 1.1; }
+.kitLabel { font-family: var(--font-hand); font-weight: 700; font-size: 3mm; margin-top: 1.6mm; }
+.kitId { font-family: var(--font-display); font-size: 11mm; line-height: 1; letter-spacing: 0; }
+.pw { margin-top: 1.4mm; display: grid; gap: 0.4mm; border: 0.5mm solid var(--ink); border-radius: 2mm; padding: 1.2mm 2.2mm 1.4mm; background: #fff; }
+.pwLabel { font-family: var(--font-hand); font-weight: 700; font-size: 2.8mm; }
+.pwValue { font-family: var(--font-body); font-weight: 800; font-size: 7mm; letter-spacing: 0.18em; font-variation-settings: 'wdth' 100; line-height: 1.1; }
+.who { font-family: var(--font-hand); font-weight: 700; font-size: 3mm; margin-top: 0.8mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qrCol { padding: 3mm 2.5mm 2mm 0; display: grid; justify-items: center; align-content: start; gap: 1mm; }
+.qrCol svg { width: 28mm; height: 28mm; border: 0.4mm solid var(--ink); }
+.qrNote { font-family: var(--font-hand); font-weight: 600; font-size: 2.3mm; line-height: 1.15; text-align: center; }
+.host { font-family: var(--font-body); font-weight: 700; font-size: 2.5mm; text-align: center; overflow-wrap: anywhere; }
+.scissors { position: absolute; right: 1mm; bottom: 1mm; width: 3.4mm; height: 3.4mm; opacity: 0.7; }
+
+@media print {
+  .overlay { position: static; overflow: visible; background: #fff; }
+  .toolbar { display: none; }
+  .pages { padding: 0; gap: 0; }
+  .page { box-shadow: none; border: 0; margin: 0; }
+}
+@page { size: A4; margin: 0; }

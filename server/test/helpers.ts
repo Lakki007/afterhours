@@ -75,7 +75,7 @@ export class Jar {
 export async function req(
   app: FastifyInstance,
   jar: Jar | null,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   payload?: unknown,
   headers: Record<string, string> = {},

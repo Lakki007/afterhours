@@ -1,0 +1,59 @@
+.floaters {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+  overflow: hidden;
+}
+.float {
+  position: absolute;
+  bottom: -60px;
+  line-height: 1;
+  filter: drop-shadow(2px 3px 0 var(--ink));
+  animation: rise 4s ease-out forwards;
+  will-change: transform, opacity;
+}
+.screen .float { filter: drop-shadow(4px 5px 0 rgb(0 0 0 / 0.5)); }
+@keyframes rise {
+  0% { transform: translate(0, 0) scale(0.4) rotate(-12deg); opacity: 0; }
+  12% { opacity: 1; transform: translate(calc(var(--sway) * 0.2), -14vh) scale(1.15) rotate(8deg); }
+  60% { transform: translate(calc(var(--sway) * -0.6), -62vh) scale(1) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(var(--sway), -112vh) scale(0.9) rotate(10deg); opacity: 0; }
+}
+
+.bar { display: grid; gap: var(--s-3); }
+.barTitle { font-size: var(--step-1); transform: rotate(-1deg); }
+.barHint { font-family: var(--font-hand); font-weight: 600; color: var(--ink-soft); font-size: var(--step--1); }
+.row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.pad {
+  --bg: var(--paper-3);
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  border: var(--outline);
+  border-radius: var(--cut-round);
+  box-shadow: var(--shadow-sm);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform var(--dur-fast) var(--ease-pop), box-shadow var(--dur-fast);
+}
+.pad:nth-child(1) { --bg: var(--tangerine); }
+.pad:nth-child(2) { --bg: var(--sun); }
+.pad:nth-child(3) { --bg: var(--lime); }
+.pad:nth-child(4) { --bg: var(--pink); }
+.pad:nth-child(5) { --bg: var(--sky); }
+.pad:nth-child(6) { --bg: var(--paper-3); }
+.pad:active { transform: translate(2px, 3px) scale(0.9); box-shadow: var(--shadow-pressed); }
+.padEmoji { display: block; transition: transform var(--dur) var(--ease-pop); }
+.pad:active .padEmoji { transform: scale(1.35) rotate(-10deg); }
+
+.stat { display: grid; gap: 6px; }
+.statRow { display: grid; grid-template-columns: 40px 1fr 56px; align-items: center; gap: 10px; }
+.statEmoji { font-size: 1.6rem; }

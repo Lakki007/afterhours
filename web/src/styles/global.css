@@ -127,4 +127,8 @@ svg {
   body {
     background: #fff;
   }
+  /* The kit card sheet prints alone: hide the app behind it. */
+  body[data-printing] #root {
+    display: none;
+  }
 }
