@@ -47,6 +47,8 @@ function humanTaps(word: string, unit: number, seed: number, jitter = { press: 0
 }
 const span = (p: Press[]) => (p[p.length - 1] as Press)[1] - (p[0] as Press)[0];
 
+const PINNED: Record<number, string> = { 1: 'bug', 2: 'code', 3: 'debug', 4: 'commit', 5: 'recurse' };
+
 interface Person {
   jar: Jar;
   id: number;
@@ -67,7 +69,14 @@ describe('morse feature', () => {
   const wordOf = (id: string) => (t.ctx.db.prepare('SELECT word FROM morse_rounds WHERE id = ?').get(id) as { word: string }).word;
   const startHttp = async (p: Person, mode: 'decode' | 'encode', level: number, sprint = false) => {
     const r = await req(t.app, p.jar, 'POST', '/api/morse/rounds', { mode, level, sprint });
-    return { status: r.statusCode, body: r.json() as Round };
+    const body = r.json() as Round;
+    // Encode words are pinned so jittery-tap tests are fully deterministic (a random word could, by chance, produce a gap the judge reads as a word break).
+    if (r.statusCode === 200 && body.mode === 'encode') {
+      const pinned = PINNED[body.level] as string;
+      t.ctx.db.prepare('UPDATE morse_rounds SET word = ? WHERE id = ?').run(pinned, body.id);
+      body.word = pinned.toUpperCase();
+    }
+    return { status: r.statusCode, body };
   };
   /** Wait out the beeps plus a bit of typing time. */
   const listen = (round: Round, typingMs = 1500) => t.clock.advance((round.signal?.leadInMs ?? 0) + (round.signal?.totalMs ?? 0) + typingMs);
@@ -578,7 +587,7 @@ describe('morse feature', () => {
       const kits = await makeKits(t.app, 1);
       const c = await signedInAttendee(t.app, kits[0]!, 'chitra');
       const screen = capture(t.ctx, { attendeeId: null, admin: false, screen: true });
-      const { admin } = await startSprint('decode', 1, 60);
+      const { admin } = await startSprint('decode', 1, 600);
       const play = async (p: Person, n: number, typing: number) => {
         let last = 0;
         for (let i = 0; i < n; i++) {
@@ -605,7 +614,7 @@ describe('morse feature', () => {
       tick(t.ctx); // unchanged board is not re-published
       expect(screen.events.filter((e) => e.type === 'morse.sprint-board')).toHaveLength(1);
 
-      t.clock.advance(120_000); // well past the end
+      t.clock.advance(700_000); // well past the 600 s end
       tick(t.ctx);
       expect(t.ctx.points.totalFrom(a.id, 'morse.sprint')).toBe(SPRINT_PRIZES.first);
       expect(t.ctx.points.totalFrom(b.id, 'morse.sprint')).toBe(SPRINT_PRIZES.second);
