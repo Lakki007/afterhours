@@ -1,0 +1,19 @@
+.card { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: center; }
+.cardText { display: grid; gap: 2px; }
+.cardTitle { font-size: var(--step-1); transform: rotate(-1deg); }
+.actions { display: flex; gap: var(--s-2); margin-top: var(--s-3); flex-wrap: wrap; }
+.steps { list-style: none; margin: 0 0 var(--s-4); padding: 0; display: grid; gap: var(--s-3); }
+.steps li { display: grid; grid-template-columns: 40px 1fr; gap: var(--s-3); align-items: start; font-size: var(--step-1); line-height: 1.25; }
+.stepNum {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: var(--sun);
+  border: var(--outline);
+  border-radius: var(--cut-round);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-display);
+}
+.stepArt { display: inline-block; vertical-align: middle; margin-left: 8px; transform: rotate(8deg); }
+.note { font-family: var(--font-hand); font-weight: 600; margin-bottom: var(--s-4); color: var(--ink-soft); }
