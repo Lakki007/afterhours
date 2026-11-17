@@ -82,9 +82,6 @@ export function SignIn() {
         <Draggy className={s.floatC}>
           <Doodle name="spark" size={44} fill="var(--lime)" strokeWidth={2} />
         </Draggy>
-        <Draggy className={s.floatD}>
-          <Doodle name="arrow" size={70} stroke="var(--ink)" />
-        </Draggy>
       </div>
 
       <header className={s.signinHead}>

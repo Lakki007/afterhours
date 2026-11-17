@@ -33,6 +33,7 @@ export function Qr({ text, size = 160, className, label }: { text: string; size?
       height={size}
       className={className}
       shapeRendering="crispEdges"
+      data-qr-text={text}
       role="img"
       aria-label={label ?? 'QR code'}
     >

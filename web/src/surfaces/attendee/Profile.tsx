@@ -71,7 +71,7 @@ export function Profile({ me }: { me: MeResponse }) {
               tone="sun"
               size="sm"
               className={s.nickDice}
-              aria-label="suggest a nickname"
+              aria-label="suggest one"
               onClick={() => {
                 sfx.rattle();
                 setNickname(NICKS[Math.floor(Math.random() * NICKS.length)] ?? 'hello_world');
