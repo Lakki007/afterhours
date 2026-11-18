@@ -6,7 +6,7 @@
 import { lazy } from 'react';
 import type { SceneStatus } from '../../core/feature';
 import { defineFeature } from '../../core/feature';
-import { HuntHomeCard, HuntPage, HuntScanLanding } from './Attendee';
+import { HuntHomeCard, HuntScanLanding, TrailPage, TrailsPage } from './Attendee';
 import { useHuntBoard } from './useHunt';
 
 function useHuntSceneStatus(): SceneStatus {
@@ -17,11 +17,12 @@ function useHuntSceneStatus(): SceneStatus {
 export const hunt = defineFeature({
   name: 'hunt',
   routes: [
-    { path: 'hunt', Component: HuntPage },
+    { path: 'hunt', Component: TrailsPage },
+    { path: 'hunt/t/:trailId', Component: TrailPage },
     { path: 'hunt/s/:token', Component: HuntScanLanding },
   ],
   home: { order: 30, Card: HuntHomeCard },
-  nav: { order: 20, label: 'hunt', to: '/hunt', icon: 'map' },
+  nav: { order: 20, label: 'trails', to: '/hunt', icon: 'map' },
   console: { order: 40, label: 'hunt', path: 'hunt', icon: 'map', Panel: lazy(() => import('./Console')) },
   scenes: [{ id: 'hunt', label: 'hunt map', Component: lazy(() => import('./Scene')), useStatus: useHuntSceneStatus, order: 30, durationMs: 15000 }],
 });

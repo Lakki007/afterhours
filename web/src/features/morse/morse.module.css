@@ -93,3 +93,5 @@
 .podium { display: grid; gap: calc(var(--u) * 0.8); }
 .podRow { display: grid; grid-template-columns: calc(var(--u) * 5) auto minmax(0, 1fr) auto; gap: calc(var(--u) * 1.2); align-items: center; font-family: var(--font-display); font-size: calc(var(--u) * 2.4); }
 .wide { width: 100%; }
+.teaser { display: grid; gap: var(--s-2); justify-items: start; }
+.teaserText { font-family: var(--font-hand); font-weight: 800; }

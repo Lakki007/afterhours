@@ -90,6 +90,7 @@ test.describe.serial('features', () => {
     await api('PUT', '/api/hunt/admin/state', { status: 'open' });
     const page = await attendee(browser);
     await page.goto('/hunt');
+    await page.getByRole('link', { name: /the after hours hunt/ }).click();
     await page.getByRole('button', { name: 'start my hunt' }).click();
     await expect(page.getByText(/clue 1\/\d/)).toBeVisible({ timeout: 6000 });
     const me = (await (await page.request.get('/api/hunt')).json()) as { current: { stopId: number } };

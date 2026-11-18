@@ -27,6 +27,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
+import { TrailListSchema } from '@afterhours/shared/features/hunt';
 import { api } from '../../core/api';
 import { useLiveEvent } from '../../core/live';
 import { celebrate, haptics, sfx } from '../../fun';
@@ -318,6 +319,7 @@ export function MorsePage() {
     <div className={ui.page}>
       <PageHead title="morse" note={`${st.players} ${st.players === 1 ? 'person has' : 'people have'} tried. you have ${st.morsePoints} morse points.`} color="var(--sky)" />
       {!st.enabled && <p className={s.off}>morse is switched off right now. the organisers will open it.</p>}
+      <TrailTeaser />
       <SprintBanner st={st} />
       {round ? (
         result ? (
@@ -367,6 +369,21 @@ export function MorsePage() {
         </>
       )}
     </div>
+  );
+}
+
+/** The offline half of the challenge: Morse messages and kit slips around the venue (trails). */
+function TrailTeaser() {
+  const q = useQuery({ queryKey: ['hunt', 'trails'], queryFn: () => api.get('/api/hunt/trails', TrailListSchema), staleTime: 30_000 });
+  const morse = (q.data?.trails ?? []).filter((t) => t.kind === 'morse' && t.status === 'open');
+  if (morse.length === 0) return null;
+  return (
+    <Card tone="sky" tilt={1.2} tape="left" tapeColor="sun" className={s.teaser}>
+      <p className={s.teaserText}>there are morse messages hidden around the venue, and your kit slips read differently when you turn them.</p>
+      <LinkButton to={morse.length === 1 ? `/hunt/t/${morse[0]!.id}` : '/hunt'} tone="ink" size="sm" icon="map">
+        {morse.length === 1 ? morse[0]!.title : 'the morse trails'}
+      </LinkButton>
+    </Card>
   );
 }
 

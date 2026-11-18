@@ -1,16 +1,19 @@
 /*
-  Treasure hunt on the phone.
-  - /hunt: the passport (stamp slots that slam down), the current clue on a torn
+  Trails on the phone (the treasure hunt is trail 1, a Morse trail and slip trails are others).
+  - /hunt: the open trails, with your progress on each.
+  - /hunt/t/:trailId: the passport (stamp slots that slam down), the current clue on a torn
     paper card with "n others on this stop", scratch-off hints with their cost,
     scan (in-app or camera app) or type the sticker code / the answer.
     Wrong answer: shake + a ring until lockedUntil. Finish: rank, time, bonuses.
   - /hunt/s/:token: what a sticker QR opens. Survives sign-in (the URL stays put).
+  Stop variants: riddle (type), scan (sticker only), morse (decode the object; chart helper and
+  an optional "play it"), slip (scan a kit slip or type its bottom strip). See Stops.tsx.
 */
-import { type HuntAttemptResult, HuntAttemptResultSchema, HuntHintResultSchema, type HuntMe, HuntMeSchema, type HuntSolvedStop, extractHuntCode } from '@afterhours/shared/features/hunt';
+import { type HuntAttemptResult, HuntAttemptResultSchema, HuntHintResultSchema, type HuntMe, HuntMeSchema, type HuntSolvedStop, TREASURE_TRAIL_ID, type TrailSummary, extractHuntCode } from '@afterhours/shared/features/hunt';
 import { useMutation } from '@tanstack/react-query';
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../../core/api';
 import { useServerNow } from '../../core/clock';
 import { fmtElapsed } from '../../core/time';
@@ -19,7 +22,8 @@ import { Button, Card, Doodle, ErrorState, LinkButton, LoadingState, NumberTicke
 import { Scanner } from '../common/Scanner';
 import { PageHead, Stamp, ui } from '../common/ui';
 import s from './hunt.module.css';
-import { useHunt, useHuntBoard, useSetHunt } from './useHunt';
+import { MorseHelper, SlipStop } from './Stops';
+import { useHunt, useHuntBoard, useSetHunt, useTrails } from './useHunt';
 
 function Passport({ me }: { me: HuntMe }) {
   const slots = Array.from({ length: me.total }, (_, i) => me.solved[i] ?? null);
@@ -106,11 +110,11 @@ function Finish({ me }: { me: HuntMe }) {
   );
 }
 
-function StartButton({ onStarted }: { onStarted: (me: HuntMe) => void }) {
+function StartButton({ trailId, onStarted }: { trailId: number; onStarted: (me: HuntMe) => void }) {
   const [n, setN] = useState<number | null>(null);
   const toast = useToast();
   const start = useMutation({
-    mutationFn: () => api.post('/api/hunt/start', {}, HuntMeSchema),
+    mutationFn: () => api.post('/api/hunt/start', { trailId }, HuntMeSchema),
     onSuccess: onStarted,
     onError: (e) => {
       setN(null);
@@ -136,7 +140,7 @@ function StartButton({ onStarted }: { onStarted: (me: HuntMe) => void }) {
     </AnimatePresence>
   ) : (
     <Button tone="tangerine" size="lg" icon="flag" block onClick={() => setN(3)}>
-      start my hunt
+      {trailId === TREASURE_TRAIL_ID ? 'start my hunt' : 'start this trail'}
     </Button>
   );
 }
@@ -155,7 +159,11 @@ function Clue({ me, onResult }: { me: HuntMe; onResult: (r: HuntAttemptResult) =
 
   const handle = (r: HuntAttemptResult) => {
     setHunt(r.me);
-    if (r.result === 'wrong' || r.result === 'locked') {
+    if (r.result === 'unlocked') {
+      sfx.success();
+      haptics.success();
+      toast(r.message, { kind: 'good', title: 'found it' });
+    } else if (r.result === 'wrong' || r.result === 'locked') {
       sfx.fail();
       haptics.fail();
       if (!reduce && scope.current) void animate(scope.current, { x: [0, -16, 14, -9, 6, 0] }, { duration: 0.45 });
@@ -172,7 +180,7 @@ function Clue({ me, onResult }: { me: HuntMe; onResult: (r: HuntAttemptResult) =
   };
   const attempt = useMutation({
     mutationFn: (b: { kind: 'scan'; code: string } | { kind: 'answer'; answer: string }) =>
-      b.kind === 'scan' ? api.post('/api/hunt/scan', { code: b.code }, HuntAttemptResultSchema) : api.post('/api/hunt/answer', { stopId: cur.stopId, answer: b.answer }, HuntAttemptResultSchema),
+      b.kind === 'scan' ? api.post('/api/hunt/scan', { code: b.code, trailId: me.trailId }, HuntAttemptResultSchema) : api.post('/api/hunt/answer', { stopId: cur.stopId, answer: b.answer }, HuntAttemptResultSchema),
     onSuccess: (r) => {
       setAnswer('');
       setCode('');
@@ -202,6 +210,8 @@ function Clue({ me, onResult }: { me: HuntMe; onResult: (r: HuntAttemptResult) =
         </div>
         <p className={s.clueText}>{cur.clue}</p>
         {cur.clueImage && <img className={s.clueImg} src={cur.clueImage} alt="clue" />}
+        {cur.challenge === 'morse' && <Stamp tone="sky">decode the morse</Stamp>}
+        {cur.needsScan && <p className={s.needsScan}>find the object and scan its QR first: that opens the answer box.</p>}
         {cur.hereNow > 0 && (
           <p className={s.here}>
             <Doodle name="users" size={18} /> {cur.hereNow} {cur.hereNow === 1 ? 'other person is' : 'others are'} on this stop
@@ -220,6 +230,11 @@ function Clue({ me, onResult }: { me: HuntMe; onResult: (r: HuntAttemptResult) =
         </button>
       )}
 
+      {cur.challenge === 'slip' ? (
+        <SlipStop me={me} cur={cur} />
+      ) : (
+        <>
+      {cur.challenge === 'morse' && <MorseHelper cur={cur} />}
       {scan ? (
         <Scanner
           onCode={(text) => {
@@ -240,7 +255,7 @@ function Clue({ me, onResult }: { me: HuntMe; onResult: (r: HuntAttemptResult) =
           if (code.trim()) attempt.mutate({ kind: 'scan', code: extractHuntCode(code.replace(/\s/g, '')) });
         }}
       >
-        <TextField label="or type the code under the qr" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABCD-EFGH" autoCapitalize="characters" />
+        <TextField label={cur.challenge === 'scan' || cur.needsScan ? 'or type the code under the qr' : 'found the sticker? type its code'} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABCD-EFGH" autoCapitalize="characters" />
         <Button type="submit" tone="paper" disabled={!code.trim()} loading={attempt.isPending}>
           go
         </Button>
@@ -253,19 +268,21 @@ function Clue({ me, onResult }: { me: HuntMe; onResult: (r: HuntAttemptResult) =
             if (answer.trim()) attempt.mutate({ kind: 'answer', answer });
           }}
         >
-          <TextField label="know the answer? type it" value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={locked} />
+          <TextField label={cur.challenge === 'morse' ? 'what does the morse say?' : 'know the answer? type it'} value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={locked} />
           <Button type="submit" tone="lime" disabled={!answer.trim() || locked} loading={attempt.isPending}>
             try
           </Button>
         </form>
       )}
       {locked && <LockRing until={cur.lockedUntil} />}
+        </>
+      )}
     </div>
   );
 }
 
-function Finishers() {
-  const b = useHuntBoard();
+function Finishers({ trailId }: { trailId: number }) {
+  const b = useHuntBoard(trailId);
   const list = b.data?.finishers ?? [];
   if (list.length === 0) return null;
   return (
@@ -280,8 +297,14 @@ function Finishers() {
   );
 }
 
-export function HuntPage() {
-  const q = useHunt();
+/** /hunt/t/:trailId (and the old /hunt view of trail 1, via TrailsPage when only it is open). */
+export function TrailPage() {
+  const { trailId = String(TREASURE_TRAIL_ID) } = useParams();
+  return <HuntPage trailId={Number(trailId) || TREASURE_TRAIL_ID} />;
+}
+
+export function HuntPage({ trailId = TREASURE_TRAIL_ID }: { trailId?: number }) {
+  const q = useHunt(trailId);
   const setHunt = useSetHunt();
   const [just, setJust] = useState<HuntSolvedStop | null>(null);
   if (q.isPending) return <LoadingState label="unfolding the map..." />;
@@ -289,7 +312,20 @@ export function HuntPage() {
   const me = q.data;
   return (
     <div className={ui.page}>
-      <PageHead title={me.title || 'the hunt'} note="your clue order is yours alone. the last stop is the same for everyone." color="var(--tangerine)" />
+      <Link to="/hunt" className={s.back}>
+        <Doodle name="arrow" size={20} style={{ transform: 'rotate(180deg)' }} /> all trails
+      </Link>
+      <PageHead
+        title={me.title || 'the hunt'}
+        note={
+          me.orderMode === 'shuffled'
+            ? 'your clue order is yours alone. the last stop is the same for everyone.'
+            : me.orderMode === 'graph'
+              ? 'what you scan decides where you go next. every path ends at a finale.'
+              : 'everyone walks the same stops in the same order.'
+        }
+        color={me.kind === 'morse' ? 'var(--sky)' : 'var(--tangerine)'}
+      />
       {me.status !== 'open' && !me.finish ? (
         <Card tone="paper" tilt={-1}>
           <p className={s.closed}>{me.status === 'draft' ? 'the hunt opens later. the organisers will shout.' : 'the hunt is closed. thanks for playing!'}</p>
@@ -303,16 +339,16 @@ export function HuntPage() {
           <p className={s.startText}>
             {me.total} stops. scan the qr sticker at each one, or solve the clue. hints cost points. first finishers get bonuses.
           </p>
-          <StartButton onStarted={setHunt} />
+          <StartButton trailId={trailId} onStarted={setHunt} />
         </Card>
       ) : me.current ? (
         <Clue me={me} onResult={(r) => r.result === 'solved' && setJust(r.stop)} />
       ) : null}
       <Passport me={me} />
       <p className={s.crowd}>
-        <b>{me.crowd.hunting}</b> hunting, <b>{me.crowd.finished}</b> finished
+        <b>{me.crowd.hunting}</b> on this trail, <b>{me.crowd.finished}</b> finished
       </p>
-      <Finishers />
+      <Finishers trailId={trailId} />
     </div>
   );
 }
@@ -350,40 +386,85 @@ export function HuntScanLanding() {
   return (
     <div className={ui.page}>
       {r.result === 'solved' ? (
-        <SolvedCard stop={r.stop} onClose={() => navigate('/hunt', { replace: true })} />
+        <SolvedCard stop={r.stop} onClose={() => navigate(`/hunt/t/${r.me.trailId}`, { replace: true })} />
       ) : (
         <motion.div animate={{ rotate: [0, -3, 3, -1, 0] }} transition={{ duration: 0.6 }}>
           <Card tone={r.result === 'already' ? 'sky' : 'pink'} tilt={-1}>
-            <h2 className={ui.cardTitle}>{r.result === 'already' ? 'already stamped' : r.result === 'not_yours' ? 'not your stop (yet)' : 'hmm'}</h2>
+            <h2 className={ui.cardTitle}>{r.result === 'already' ? 'already stamped' : r.result === 'not_yours' ? 'not your stop (yet)' : r.result === 'unlocked' ? 'found it' : 'hmm'}</h2>
             <p className={s.reveal}>{r.message}</p>
           </Card>
         </motion.div>
       )}
-      <LinkButton to="/hunt" tone="ink" icon="map" replace>
+      <LinkButton to={`/hunt/t/${r.me.trailId}`} tone="ink" icon="map" replace>
         to my passport
       </LinkButton>
     </div>
   );
 }
 
+const KIND_TONE: Record<TrailSummary['kind'], 'tangerine' | 'sky' | 'grape'> = { hunt: 'tangerine', morse: 'sky', other: 'grape' };
+
+function TrailCard({ t, i }: { t: TrailSummary; i: number }) {
+  return (
+    <Link to={`/hunt/t/${t.id}`} className={s.trailLink}>
+      <Card tone={KIND_TONE[t.kind]} tilt={i % 2 ? 1 : -1} press className={s.trailCard}>
+        <div className={ui.between}>
+          <span className={s.trailKind}>{t.kind === 'hunt' ? 'treasure hunt' : t.kind === 'morse' ? 'morse trail' : 'trail'}</span>
+          {t.status === 'closed' ? <Stamp tone="done">closed</Stamp> : t.finishedRank ? <Stamp tone="ink">#{t.finishedRank}</Stamp> : t.started ? <Stamp tone="live">on it</Stamp> : null}
+        </div>
+        <h3 className={s.trailTitle}>{t.title}</h3>
+        <div className={ui.between}>
+          <span className={s.trailMeta}>
+            {t.solved}/{t.total} stamps
+          </span>
+          <span className={s.trailMeta}>
+            {t.hunting} on it, {t.finished} done
+          </span>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+/** /hunt: every open trail. */
+export function TrailsPage() {
+  const q = useTrails();
+  if (q.isPending) return <LoadingState label="unfolding the maps..." />;
+  if (q.isError) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
+  const trails = q.data.trails;
+  return (
+    <div className={ui.page}>
+      <PageHead title="trails" note="treasure hunts and morse trails. scan, decode, turn your slips. each trail pays its own points." color="var(--tangerine)" />
+      {trails.length === 0 ? (
+        <Card tone="paper" tilt={-1}>
+          <p className={s.closed}>no trail is open yet. the organisers will shout.</p>
+        </Card>
+      ) : (
+        trails.map((t, i) => <TrailCard key={t.id} t={t} i={i} />)
+      )}
+    </div>
+  );
+}
+
 export function HuntHomeCard() {
-  const q = useHunt();
-  const me = q.data;
-  if (!me || me.status === 'draft') return null;
+  const q = useTrails();
+  const open = (q.data?.trails ?? []).filter((t) => t.status === 'open');
+  if (open.length === 0) return null;
+  const mine = open.find((t) => t.started && !t.finishedRank) ?? open[0]!;
   return (
     <Card tone="tangerine" tilt={-0.8} tape="right" tapeColor="sun" className={s.homeCard}>
       <div className={ui.between}>
-        <span className={ui.kicker}>{me.status === 'closed' ? 'hunt is over' : me.finish ? `you finished #${me.finish.rank}` : me.started ? 'hunt in progress' : 'the hunt is on'}</span>
+        <span className={ui.kicker}>{open.length === 1 ? 'a trail is open' : `${open.length} trails are open`}</span>
         <span className={s.count}>
-          {me.solved.length}/{me.total}
+          {mine.solved}/{mine.total}
         </span>
       </div>
-      <h3 className={s.homeTitle}>{me.title || 'treasure hunt'}</h3>
+      <h3 className={s.homeTitle}>{mine.title}</h3>
       <p className={ui.hand}>
-        {me.crowd.hunting} hunting right now, {me.crowd.finished} done
+        {mine.hunting} on it right now, {mine.finished} done
       </p>
-      <LinkButton to="/hunt" tone="ink" icon="map" size="sm">
-        {me.started ? 'my passport' : 'start hunting'}
+      <LinkButton to={open.length === 1 ? `/hunt/t/${mine.id}` : '/hunt'} tone="ink" icon="map" size="sm">
+        {mine.started ? 'my passport' : 'pick a trail'}
       </LinkButton>
     </Card>
   );
