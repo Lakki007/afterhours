@@ -97,15 +97,22 @@ function bump(ctx: FeatureContext): void {
 /** Phase of every row as of `now` (see rules above). */
 export function computePhases(rows: Row[], now: number): Map<number, ActivityStatus> {
   // First start time among organiser-started rows: scheduled rows before it were skipped or done.
+  // Also by original slot: starting something early skips whatever was planned before it, even
+  // though those rows now sit later on the clock than the early start (they must not show as "up next").
   let liveFrom = Infinity;
-  for (const r of rows) if (r.status === 'live') liveFrom = Math.min(liveFrom, r.start_at);
+  let livePlannedFrom = Infinity;
+  for (const r of rows)
+    if (r.status === 'live') {
+      liveFrom = Math.min(liveFrom, r.start_at);
+      livePlannedFrom = Math.min(livePlannedFrom, r.planned_start_at);
+    }
   const organiserLive = liveFrom !== Infinity;
   const out = new Map<number, ActivityStatus>();
   for (const r of rows) {
     let s: ActivityStatus;
     if (r.status === 'ended') s = 'ended';
     else if (r.status === 'live') s = 'live';
-    else if (organiserLive) s = r.start_at < liveFrom ? 'ended' : 'upcoming';
+    else if (organiserLive) s = r.start_at < liveFrom || r.planned_start_at < livePlannedFrom ? 'ended' : 'upcoming';
     else if (now >= r.end_at) s = 'ended';
     else if (now >= r.start_at) s = 'live';
     else s = 'upcoming';

@@ -48,8 +48,16 @@ export function PollOverlay() {
     }
   }, [live, open]);
 
+  const showPill = Boolean(view) && !pathname.startsWith('/polls') && live && !open;
+  // Reserve room above the nav while the pill is docked there, so it never covers content.
+  useEffect(() => {
+    if (!showPill) return;
+    document.documentElement.dataset.dock = 'poll';
+    return () => {
+      delete document.documentElement.dataset.dock;
+    };
+  }, [showPill]);
   if (!view || pathname.startsWith('/polls')) return null;
-  const showPill = live && !open;
   return (
     <>
       <AnimatePresence>
@@ -76,12 +84,14 @@ export function PollOverlay() {
           <motion.button
             type="button"
             className={`${s.pill} ${needsMe ? s.pillHot : ''}`}
-            initial={reduce ? { opacity: 0 } : { y: 80, rotate: -10 }}
-            animate={{ y: 0, rotate: -3, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
+            initial={reduce ? { opacity: 0 } : { y: 60 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
             onClick={() => setOpen(true)}
           >
-            <Doodle name="bars" size={22} /> {needsMe ? (view.poll.kind === 'quiz' ? 'quiz is live, tap in' : 'poll is live, vote') : 'poll is live'}
+            <span className={s.pillIcon}>
+              <Doodle name="bars" size={22} />
+            </span> {needsMe ? (view.poll.kind === 'quiz' ? 'quiz is live, tap in' : 'poll is live, vote') : 'poll is live'}
           </motion.button>
         )}
       </AnimatePresence>

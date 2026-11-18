@@ -35,6 +35,22 @@ describe('schedule feature', () => {
   /** start/end offsets in minutes relative to T0 */
   const span = (a: Activity) => [(a.startAt - T0()) / MIN, (a.endAt - T0()) / MIN];
 
+  describe('starting early', () => {
+    it('starting a later activity long before its slot skips the ones planned before it: they never show as up next', async () => {
+      const a = await make('doors', 120, 140);
+      const b = await make('welcome', 140, 155);
+      const c = await make('talk', 155, 195);
+      const d = await make('break', 195, 210);
+      // the organiser starts "talk" two hours early (rehearsal, or a test run the day before)
+      expect((await post(`/${c}/start`)).statusCode).toBe(200);
+      const s = await state();
+      expect(s.nowId).toBe(c);
+      expect(s.nextId).toBe(d);
+      expect(get(s, a).status).toBe('ended');
+      expect(get(s, b).status).toBe('ended');
+    });
+  });
+
   describe('access', () => {
     it('state is for signed-in phones, projector and console only; writes are console only', async () => {
       expect((await req(t.app, null, 'GET', '/api/schedule')).statusCode).toBe(401);

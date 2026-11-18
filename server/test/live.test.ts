@@ -208,7 +208,8 @@ describe('SSE stream', () => {
     const bus = new LiveBus({ heartbeatMs: 50 });
     const frames: string[] = [];
     bus.subscribe({ viewer: anonymousViewer, write: (f) => (frames.push(f), true), close() {} });
-    await new Promise((r) => setTimeout(r, 180));
+    const until = Date.now() + 5000;
+    while (frames.filter((f) => f.startsWith('event: hb')).length < 2 && Date.now() < until) await new Promise((r) => setTimeout(r, 20));
     expect(frames.filter((f) => f.startsWith('event: hb')).length).toBeGreaterThanOrEqual(2);
     bus.close();
     await quick.close();
@@ -232,7 +233,10 @@ describe('SSE stream', () => {
     const ms = performance.now() - started;
     expect(ms).toBeLessThan(2000);
     for (const s of streams) s.close();
-    await new Promise((r) => setTimeout(r, 200));
+    // The server sees each socket close on its own schedule (slower under a loaded machine):
+    // wait for the count to drain instead of sleeping a fixed 200 ms.
+    const deadline = Date.now() + 10_000;
+    while (t.ctx.live.connectionCount > 0 && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
     expect(t.ctx.live.connectionCount).toBe(0);
   }, 30_000);
 });

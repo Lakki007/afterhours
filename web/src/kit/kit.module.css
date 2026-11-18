@@ -211,6 +211,7 @@
   pointer-events: none;
   padding: 0 var(--s-4);
 }
+:global(html[data-dock]) .toasts { bottom: calc(var(--nav-h) + 52px + 14px + env(safe-area-inset-bottom)); }
 .toast {
   pointer-events: auto;
   position: relative;

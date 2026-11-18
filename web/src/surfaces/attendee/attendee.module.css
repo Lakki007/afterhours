@@ -170,6 +170,8 @@
 /* -------------------------------------------------------------- shell */
 .shell { position: relative; max-width: var(--page-max); margin: 0 auto; min-height: 100dvh; }
 .main { padding-bottom: calc(var(--nav-h) + var(--s-6) + env(safe-area-inset-bottom)); }
+/* a bar docked on top of the nav (the live-poll pill) gets its own room */
+:global(html[data-dock]) .main { padding-bottom: calc(var(--nav-h) + 52px + var(--s-6) + env(safe-area-inset-bottom)); }
 .update {
   position: sticky;
   top: 0;
