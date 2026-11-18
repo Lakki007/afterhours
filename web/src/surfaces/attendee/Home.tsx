@@ -165,10 +165,18 @@ export function Home({ me }: { me: MeResponse }) {
     <div className={s.home}>
       <Greeting me={me} />
       <div className={s.homeBody}>
+        {/* order < 10: the cards that matter most right now (now and next) sit above your points */}
+        <section className={s.slot} data-slot="home-top" aria-label="now">
+          {homeCards
+            .filter((c) => c.order < 10)
+            .map((c) => (
+              <c.Card key={c.feature} />
+            ))}
+        </section>
         <PointsTicket />
         <PresenceNote />
         <section className={s.slot} data-slot="home-cards" aria-label="happening">
-          {homeCards.map((c) => (
+          {homeCards.filter((c) => c.order >= 10).map((c) => (
             <c.Card key={c.feature} />
           ))}
         </section>

@@ -1,0 +1,69 @@
+/* Shared bits for feature screens: page heads, stamps, console sections. Tokens only. */
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); padding: calc(var(--s-6) + env(safe-area-inset-top)) var(--gutter) 0; }
+.head { display: grid; gap: 6px; justify-items: start; }
+.title { font-size: var(--step-5); line-height: 0.95; transform: rotate(-2deg); transform-origin: left; text-shadow: 3px 3px 0 var(--sun); }
+.hand {
+  font-family: var(--font-hand);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.handBig { font-family: var(--font-hand); font-weight: 800; font-size: var(--step-1); }
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-display);
+  font-size: var(--step--1);
+  line-height: 1;
+  padding: 5px 9px 4px;
+  border: var(--line) solid currentColor;
+  border-radius: var(--cut-3);
+  transform: rotate(var(--rot, -6deg));
+  white-space: nowrap;
+  background: var(--paper-3);
+}
+.stamp-live { color: var(--ink); background: var(--lime); border-color: var(--ink); box-shadow: var(--shadow-sm); }
+.stamp-done { color: var(--ink-soft); background: transparent; }
+.stamp-late { color: var(--ink); background: var(--pink); border-color: var(--ink); }
+.stamp-info { color: var(--ink); background: var(--sun); border-color: var(--ink); }
+.stamp-sky { color: var(--ink); background: var(--sky); border-color: var(--ink); }
+.stamp-ink { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+
+.row { display: flex; gap: var(--s-3); flex-wrap: wrap; align-items: center; }
+.between { display: flex; gap: var(--s-3); align-items: center; justify-content: space-between; }
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
+.cardTitle { font-size: var(--step-2); line-height: 1.05; transform: rotate(-0.8deg); transform-origin: left; }
+.kicker { font-family: var(--font-hand); font-weight: 800; font-size: var(--step-0); }
+
+/* console */
+.section { display: grid; gap: var(--s-4); }
+.sectionTitle { font-size: var(--step-2); transform: rotate(-0.8deg); transform-origin: left; }
+.select {
+  min-height: var(--tap);
+  padding: 0 var(--s-3);
+  font: inherit;
+  font-weight: 700;
+  background: var(--paper-3);
+  color: var(--ink);
+  border: var(--outline);
+  border-radius: var(--cut-3);
+  box-shadow: var(--shadow-sm);
+}
+.label { display: grid; gap: 4px; font-family: var(--font-hand); font-weight: 800; }
+.toggle { display: inline-flex; gap: var(--s-2); align-items: center; font-family: var(--font-hand); font-weight: 800; min-height: 44px; cursor: pointer; }
+.toggle input { width: 24px; height: 24px; accent-color: var(--grape); }
+.table { width: 100%; border-collapse: collapse; }
+.table th { text-align: left; font-family: var(--font-hand); font-weight: 800; padding: var(--s-2) var(--s-3); border-bottom: var(--line-thin) solid var(--ink); }
+.table td { padding: 8px var(--s-3); border-bottom: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent); vertical-align: middle; }
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.statGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-4); }
+.stat { display: grid; gap: 2px; }
+.statNum { font-family: var(--font-display); font-size: var(--step-5); line-height: 1; }
+.statLabel { font-family: var(--font-hand); font-weight: 800; }
+.danger { border-color: var(--pink); }
+
+/* projector: sized in --u (1% of the 16:9 stage) */
+.scene { position: relative; display: grid; align-content: center; gap: calc(var(--u) * 2.4); padding: calc(var(--u) * 4) calc(var(--u) * 6); color: var(--paper); overflow: hidden; }
+.sceneTitle { font-size: calc(var(--u) * 5); line-height: 1; transform: rotate(-2deg); transform-origin: left; text-shadow: 4px 5px 0 var(--ink); }
+.sceneHand { font-family: var(--font-hand); font-weight: 800; font-size: calc(var(--u) * 2.2); }

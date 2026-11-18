@@ -2,10 +2,11 @@
   Console shell: index-tab side nav built from the feature registry (plus the
   two core panels, Kits and Projector), and a routed content area.
 */
+import { Suspense } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router';
 import { consolePanels } from '../../core/featureHost';
 import { useStaffSignOut } from '../../core/queries';
-import { Button, Doodle, EmptyState, type IconName, type Tone } from '../../kit';
+import { Button, Doodle, EmptyState, type IconName, LoadingState, type Tone } from '../../kit';
 import { Wordmark } from '../shared/Wordmark';
 import s from './admin.module.css';
 import { KitsPanel } from './KitsPanel';
@@ -57,7 +58,9 @@ export function AdminShell() {
               element={
                 <div className={s.panel}>
                   <h1 className={s.panelTitle}>{p.label}</h1>
-                  <p.Panel />
+                  <Suspense fallback={<LoadingState label="loading panel..." />}>
+                    <p.Panel />
+                  </Suspense>
                 </div>
               }
             />
