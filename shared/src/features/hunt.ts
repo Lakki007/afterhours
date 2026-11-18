@@ -9,6 +9,59 @@
 import { z } from 'zod';
 import { AvatarConfigSchema } from '../avatar';
 import { GlyphSchema, PaletteColorSchema } from '../palette';
+import { MORSE_TABLE, MorseSignalSchema, wordToPatterns } from './morse';
+
+// ---- trails ------------------------------------------------------------------
+// A trail is one sequence of stops with its own state, order, points and finish
+// order. The treasure hunt is trail 1; a Morse trail (objects around the venue
+// carrying Morse messages) is another; organisers can add more from the console.
+
+export const TREASURE_TRAIL_ID = 1;
+export const TRAIL_KINDS = ['hunt', 'morse', 'other'] as const;
+export const TrailKindSchema = z.enum(TRAIL_KINDS);
+export type TrailKind = z.infer<typeof TrailKindSchema>;
+/** shuffled: per-attendee order with the same final stop for everyone. fixed: authoring order for all. */
+/** graph: stops connect through exits and slip outcomes; each person's path is their own. */
+export const TrailOrderModeSchema = z.enum(['shuffled', 'fixed', 'graph']);
+export type TrailOrderMode = z.infer<typeof TrailOrderModeSchema>;
+
+/** How a stop is verified. */
+export const HUNT_CHALLENGES = ['riddle', 'scan', 'morse', 'slip'] as const;
+export const HuntChallengeSchema = z.enum(HUNT_CHALLENGES);
+export type HuntChallenge = z.infer<typeof HuntChallengeSchema>;
+
+/** Online fallback for a Morse stop plays at this speed (words per minute). */
+export const TRAIL_MORSE_WPM = 8;
+
+/** The word as Morse can carry it: upper case letters and digits only. */
+export function morseWordOf(word: string): string {
+  return word.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/** True when the word has at least one character and every character has a Morse code. */
+export function isMorseWord(word: string): boolean {
+  const w = morseWordOf(word);
+  return w.length > 0 && [...w].every((c) => MORSE_TABLE[c] !== undefined);
+}
+
+/** Dots and dashes per letter, for a printable Morse card. */
+export function morseCardPatterns(word: string): string[] {
+  return wordToPatterns(morseWordOf(word));
+}
+
+export const TrailSettingsSchema = z.object({
+  id: z.number().int(),
+  position: z.number().int(),
+  kind: TrailKindSchema,
+  title: z.string(),
+  status: z.enum(['draft', 'open', 'closed']),
+  orderMode: TrailOrderModeSchema,
+  hintsOn: z.boolean(),
+  cooldownOn: z.boolean(),
+  openedAt: z.number().nullable(),
+  closedAt: z.number().nullable(),
+});
+export type TrailSettings = z.infer<typeof TrailSettingsSchema>;
 
 // ---- constants (shared so the UI can show them; the server enforces them) ----
 
@@ -76,6 +129,16 @@ export const HuntSolvedStopSchema = z.object({
 export type HuntSolvedStop = z.infer<typeof HuntSolvedStopSchema>;
 
 export const HuntCurrentStopSchema = z.object({
+  /** How this stop is verified (riddle, scan, morse). */
+  challenge: HuntChallengeSchema,
+  /** The object's QR must be scanned before typing; true until it is. */
+  needsScan: z.boolean(),
+  /** Morse stop: letters in the hidden word (the UI draws that many boxes). */
+  letters: z.number().int().nullable(),
+  /** Morse stop with online fallback: what to play/flash. Never the readable word. */
+  signal: MorseSignalSchema.nullable(),
+  /** Slip stop: which slip from your kit to scan. Never its readings. */
+  slip: z.object({ slipNo: z.number().int(), label: z.string() }).nullable(),
   stopId: z.number().int(),
   index: z.number().int(),
   total: z.number().int(),
@@ -101,6 +164,7 @@ export type HuntCurrentStop = z.infer<typeof HuntCurrentStopSchema>;
 
 /** Anonymous crowd counts, safe for everyone to see. */
 export const HuntCrowdSchema = z.object({
+  trailId: z.number().int(),
   /** People currently ON each stop (stop id -> count). Only stops with someone on them. */
   here: z.array(z.object({ stopId: z.number().int(), count: z.number().int() })),
   /** Started and not finished. */
@@ -138,6 +202,10 @@ export type HuntMyFinish = z.infer<typeof HuntMyFinishSchema>;
 
 /** GET /api/hunt (attendee): everything the passport screen needs. */
 export const HuntMeSchema = z.object({
+  trailId: z.number().int(),
+  kind: TrailKindSchema,
+  orderMode: TrailOrderModeSchema,
+  hintsOn: z.boolean(),
   status: HuntStatusSchema,
   title: z.string(),
   total: z.number().int(),
@@ -181,6 +249,8 @@ export type HuntHintRequest = z.infer<typeof HuntHintRequestSchema>;
  * Errors (not open, not started, rate limited, bad input) use the shared error shape.
  */
 export const HuntAttemptResultSchema = z.discriminatedUnion('result', [
+  /** Scanned the object of a require-scan stop: the answer box is open now. */
+  z.object({ result: z.literal('unlocked'), message: z.string(), stopId: z.number().int(), me: HuntMeSchema }),
   z.object({
     result: z.literal('solved'),
     message: z.string(),
@@ -222,6 +292,7 @@ export type HuntHintResult = z.infer<typeof HuntHintResultSchema>;
 
 /** GET /api/hunt/board (attendee, projector, console): the live crowd and finishers. */
 export const HuntBoardSchema = z.object({
+  trailId: z.number().int(),
   status: HuntStatusSchema,
   title: z.string(),
   total: z.number().int(),
@@ -235,6 +306,17 @@ export type HuntBoard = z.infer<typeof HuntBoardSchema>;
 // ---- console side ----
 
 const StopTextFields = {
+  /** Default: riddle when there are answers, scan when there are none. */
+  challenge: HuntChallengeSchema.optional(),
+  requireScan: z.boolean().default(false),
+  /** Morse stops only: let the phone play/flash the Morse itself (no physical object, or remote play). */
+  onlineFallback: z.boolean().default(false),
+  /** Slip stops: the slip whose readings decide what happens. */
+  slipId: z.number().int().nullable().default(null),
+  /** Graph trails: where a riddle/scan/morse stop leads once stamped. */
+  nextStopId: z.number().int().nullable().default(null),
+  /** Graph trails: stamping this stop finishes the trail. */
+  finale: z.boolean().default(false),
   title: z.string().trim().min(1).max(60),
   clue: z.string().trim().min(1).max(400),
   /** Relative path or https URL. */
@@ -260,6 +342,13 @@ export const HuntStopInputSchema = z.object(StopTextFields);
 export type HuntStopInput = z.input<typeof HuntStopInputSchema>;
 
 export const HuntAdminStopSchema = z.object({
+  trailId: z.number().int(),
+  challenge: HuntChallengeSchema,
+  requireScan: z.boolean(),
+  onlineFallback: z.boolean(),
+  slipId: z.number().int().nullable(),
+  nextStopId: z.number().int().nullable(),
+  finale: z.boolean(),
   id: z.number().int(),
   position: z.number().int(),
   /** The last stop in order is the finale, the same for everyone. */
@@ -285,6 +374,7 @@ export type HuntAdminStop = z.infer<typeof HuntAdminStopSchema>;
 
 /** GET /api/hunt/admin */
 export const HuntAdminSchema = z.object({
+  trail: TrailSettingsSchema,
   status: HuntStatusSchema,
   title: z.string(),
   openedAt: z.number().nullable(),
@@ -357,10 +447,11 @@ export const HuntAdminResetRequestSchema = z.object({ confirm: z.literal(HUNT_CO
 
 // ---- live events ----
 
-export const HuntStateEventSchema = z.object({ status: HuntStatusSchema, title: z.string(), total: z.number().int() });
+export const HuntStateEventSchema = z.object({ trailId: z.number().int(), status: HuntStatusSchema, title: z.string(), total: z.number().int() });
 export type HuntStateEvent = z.infer<typeof HuntStateEventSchema>;
 
 export const HuntStampEventSchema = z.object({
+  trailId: z.number().int(),
   nickname: z.string(),
   avatar: AvatarConfigSchema,
   solved: z.number().int(),
@@ -370,6 +461,7 @@ export const HuntStampEventSchema = z.object({
 export type HuntStampEvent = z.infer<typeof HuntStampEventSchema>;
 
 export const HuntFinishedEventSchema = z.object({
+  trailId: z.number().int(),
   finisher: HuntFinisherSchema,
   finishedCount: z.number().int(),
 });
@@ -387,3 +479,237 @@ declare module '../live' {
     'hunt.finished': HuntFinishedEvent;
   }
 }
+
+// ---- trails: lists, console --------------------------------------------------
+
+/** GET /api/hunt/trails (attendee): the trails you can play, with your progress. */
+export const TrailSummarySchema = z.object({
+  id: z.number().int(),
+  kind: TrailKindSchema,
+  title: z.string(),
+  status: HuntStatusSchema,
+  total: z.number().int(),
+  started: z.boolean(),
+  solved: z.number().int(),
+  finishedRank: z.number().int().nullable(),
+  hunting: z.number().int(),
+  finished: z.number().int(),
+});
+export type TrailSummary = z.infer<typeof TrailSummarySchema>;
+export const TrailListSchema = z.object({ trails: z.array(TrailSummarySchema), serverNow: z.number() });
+export type TrailList = z.infer<typeof TrailListSchema>;
+
+/** POST /api/hunt/admin/trails */
+export const TrailCreateRequestSchema = z.object({
+  title: z.string().trim().min(1).max(60),
+  kind: TrailKindSchema.default('other'),
+  orderMode: TrailOrderModeSchema.default('shuffled'),
+  hintsOn: z.boolean().default(true),
+  cooldownOn: z.boolean().default(true),
+});
+export type TrailCreateRequest = z.input<typeof TrailCreateRequestSchema>;
+/** PUT /api/hunt/admin/trails/:id (open/close goes through PUT /admin/state?trail=) */
+export const TrailUpdateRequestSchema = z
+  .object({
+    title: z.string().trim().min(1).max(60),
+    kind: TrailKindSchema,
+    orderMode: TrailOrderModeSchema,
+    hintsOn: z.boolean(),
+    cooldownOn: z.boolean(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, 'Nothing to change');
+export type TrailUpdateRequest = z.input<typeof TrailUpdateRequestSchema>;
+/** GET /api/hunt/admin/trails */
+export const TrailAdminListSchema = z.object({
+  trails: z.array(TrailSettingsSchema.extend({ stops: z.number().int(), players: z.number().int(), finished: z.number().int() })),
+});
+export type TrailAdminList = z.infer<typeof TrailAdminListSchema>;
+
+/** GET /api/hunt/admin/cards?trail=: printable Morse cards to stick on objects (console only: contains the words). */
+export const MorseCardSheetSchema = z.object({
+  trailId: z.number().int(),
+  title: z.string(),
+  cards: z.array(
+    z.object({
+      stopId: z.number().int(),
+      position: z.number().int(),
+      title: z.string(),
+      location: z.string(),
+      word: z.string(),
+      /** One pattern per letter, e.g. ["-.-.", "---", "-.."] for COD. */
+      patterns: z.array(z.string()),
+      requireScan: z.boolean(),
+      code: z.string(),
+      url: z.string(),
+    }),
+  ),
+});
+export type MorseCardSheet = z.infer<typeof MorseCardSheetSchema>;
+
+// ---- Morse slips (docs/SLIPS.md) -----------------------------------------------
+
+/** The edge at the bottom of the camera view when the reading is made; 'extra' is a planted decoy sequence. */
+export const SLIP_ORIENTATIONS = ['bottom', 'right', 'top', 'left', 'extra'] as const;
+export const SlipOrientationSchema = z.enum(SLIP_ORIENTATIONS);
+export type SlipOrientation = z.infer<typeof SlipOrientationSchema>;
+export const SLIP_OUTCOMES = ['next', 'branch', 'clue', 'bonus', 'decoy'] as const;
+export const SlipOutcomeSchema = z.enum(SLIP_OUTCOMES);
+export type SlipOutcome = z.infer<typeof SlipOutcomeSchema>;
+export const SlipSetModeSchema = z.enum(['shared', 'per_kit']);
+export type SlipSetMode = z.infer<typeof SlipSetModeSchema>;
+
+/**
+ * The matching key for a Morse sequence: letters separated by one space, words by " / ".
+ * Accepts the printable look-alikes people and OCR produce (bullets, long dashes, underscores).
+ */
+export function slipMorseKey(morse: string): string {
+  return morse
+    .replace(/[\u00b7\u2022\u2219\u25cf]/g, '.')
+    .replace(/[\u2013\u2014\u2212_]/g, '-')
+    .replace(/[^.\-/ ]/g, '')
+    .split('/')
+    .map((w) => w.trim().split(/\s+/).filter(Boolean).join(' '))
+    .filter(Boolean)
+    .join(' / ');
+}
+
+/** The matching key for a typed word: its Morse sequence (so typed and scanned readings match the same way). */
+export function slipWordKey(word: string): string {
+  return word
+    .toUpperCase()
+    .split(/\s+/)
+    .map((w) => wordToPatterns(morseWordOf(w)).join(' '))
+    .filter(Boolean)
+    .join(' / ');
+}
+
+export const SlipReadingInputSchema = z
+  .object({
+    orientation: SlipOrientationSchema,
+    /** The word printed on that edge (shared sets). Per-kit sets leave it empty: words come from the pool. */
+    word: z.string().trim().max(24).nullable().default(null),
+    /** Explicit sequence instead of a word (decoys such as an upside-down strip). */
+    morse: z.string().trim().max(200).nullable().default(null),
+    outcome: SlipOutcomeSchema,
+    targetStopId: z.number().int().nullable().default(null),
+    targetTrailId: z.number().int().nullable().default(null),
+    clue: z.string().trim().max(300).default(''),
+    bonusPoints: z.number().int().min(0).max(50).default(0),
+    message: z.string().trim().max(200).default(''),
+  })
+  .refine((r) => r.word === null || isMorseWord(r.word), { message: 'Words can only use letters and digits (Morse has no others).', path: ['word'] });
+export type SlipReadingInput = z.input<typeof SlipReadingInputSchema>;
+
+/** POST /api/hunt/admin/slip-sets?trail= */
+export const SlipSetInputSchema = z.object({
+  title: z.string().trim().min(1).max(60),
+  mode: SlipSetModeSchema.default('shared'),
+  /** Per-kit sets: the words each kit's readings are drawn from (at least as many as readings). */
+  pool: z.array(z.string().trim().min(1).max(24)).max(500).default([]),
+});
+export type SlipSetInput = z.input<typeof SlipSetInputSchema>;
+
+/** PUT /api/hunt/admin/slips/:id (and POST /admin/slip-sets/:id/slips): one slip and all its readings. */
+export const SlipInputSchema = z.object({
+  slipNo: z.number().int().min(1).max(99),
+  label: z.string().trim().max(60).default(''),
+  readings: z.array(SlipReadingInputSchema).max(8),
+});
+export type SlipInput = z.input<typeof SlipInputSchema>;
+
+export const SlipReadingAdminSchema = z.object({
+  id: z.number().int(),
+  orientation: SlipOrientationSchema,
+  word: z.string().nullable(),
+  morse: z.string().nullable(),
+  outcome: SlipOutcomeSchema,
+  targetStopId: z.number().int().nullable(),
+  targetTrailId: z.number().int().nullable(),
+  clue: z.string(),
+  bonusPoints: z.number().int(),
+  message: z.string(),
+  /** People who found this reading so far. */
+  finds: z.number().int(),
+});
+export type SlipReadingAdmin = z.infer<typeof SlipReadingAdminSchema>;
+export const SlipSetAdminSchema = z.object({
+  id: z.number().int(),
+  trailId: z.number().int(),
+  title: z.string(),
+  mode: SlipSetModeSchema,
+  pool: z.array(z.string()),
+  slips: z.array(z.object({ id: z.number().int(), slipNo: z.number().int(), label: z.string(), readings: z.array(SlipReadingAdminSchema) })),
+});
+export type SlipSetAdmin = z.infer<typeof SlipSetAdminSchema>;
+export const SlipSetListSchema = z.object({ sets: z.array(SlipSetAdminSchema) });
+export type SlipSetList = z.infer<typeof SlipSetListSchema>;
+
+/** POST /api/hunt/slip: what the scanner (primary.text, or primary.morse) or a typed word read. */
+export const HuntSlipRequestSchema = z
+  .object({
+    stopId: z.number().int(),
+    text: z.string().trim().max(60).optional(),
+    morse: z.string().trim().max(300).optional(),
+  })
+  .refine((b) => Boolean(b.text) || Boolean(b.morse), 'Send the text or the morse you read.');
+export type HuntSlipRequest = z.input<typeof HuntSlipRequestSchema>;
+
+/** What a reading did. 'unknown' is the same friendly answer for every wrong sequence: it never hints at the valid ones. */
+export const HuntSlipResultSchema = z.object({
+  outcome: z.union([SlipOutcomeSchema, z.literal('unknown')]),
+  message: z.string(),
+  /** clue outcome: the clue text. */
+  clue: z.string().nullable(),
+  /** bonus outcome: points paid now (0 when you had already claimed it). */
+  points: z.number().int(),
+  /** next/branch outcomes: the stop this reading stamped. */
+  stamped: HuntSolvedStopSchema.nullable(),
+  finish: HuntMyFinishSchema.nullable(),
+  /** branch to another trail: that trail is now started for you. */
+  unlockedTrailId: z.number().int().nullable(),
+  me: HuntMeSchema,
+});
+export type HuntSlipResult = z.infer<typeof HuntSlipResultSchema>;
+
+/** GET /api/hunt/admin/slip-print?set=: what the slip printer needs (per kit for per-kit sets). */
+export const SlipPrintSheetSchema = z.object({
+  setId: z.number().int(),
+  title: z.string(),
+  mode: SlipSetModeSchema,
+  slips: z.array(
+    z.object({
+      slipNo: z.number().int(),
+      label: z.string(),
+      kitId: z.string().nullable(),
+      edges: z.object({
+        bottom: z.object({ word: z.string(), morse: z.string() }).nullable(),
+        right: z.object({ word: z.string(), morse: z.string() }).nullable(),
+        top: z.object({ word: z.string(), morse: z.string() }).nullable(),
+        left: z.object({ word: z.string(), morse: z.string() }).nullable(),
+      }),
+    }),
+  ),
+});
+export type SlipPrintSheet = z.infer<typeof SlipPrintSheetSchema>;
+
+/** GET /api/hunt/admin/graph?trail=: nodes and edges, with live counts per edge. */
+export const TrailGraphSchema = z.object({
+  trailId: z.number().int(),
+  nodes: z.array(z.object({ stopId: z.number().int(), title: z.string(), challenge: HuntChallengeSchema, start: z.boolean(), finale: z.boolean(), hereNow: z.number().int(), solvedBy: z.number().int() })),
+  edges: z.array(
+    z.object({
+      from: z.number().int(),
+      to: z.number().int().nullable(),
+      toTrailId: z.number().int().nullable(),
+      kind: z.enum(['exit', 'reading']),
+      label: z.string(),
+      readingId: z.number().int().nullable(),
+      outcome: SlipOutcomeSchema.nullable(),
+      count: z.number().int(),
+    }),
+  ),
+  /** Non-finale stops with no way out: organisers should fix these. */
+  deadEnds: z.array(z.number().int()),
+});
+export type TrailGraph = z.infer<typeof TrailGraphSchema>;

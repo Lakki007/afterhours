@@ -464,7 +464,7 @@ describe('hunt feature', () => {
       const live = t.ctx.live;
       const watcher = capture(t.ctx, { attendeeId: null, admin: false, screen: false });
       await api(admin, 'PUT', '/admin/state', { status: 'closed' });
-      expect(watcher.events.filter((e) => e.type === 'hunt.state').map((e) => e.data)).toEqual([{ status: 'closed', title: 'the after hours hunt', total: 5 }]);
+      expect(watcher.events.filter((e) => e.type === 'hunt.state').map((e) => e.data)).toEqual([{ trailId: 1, status: 'closed', title: 'the after hours hunt', total: 5 }]);
       const closed = await me(w);
       expect(closed.body.status).toBe('closed');
       expect(closed.body.current).toBeNull();

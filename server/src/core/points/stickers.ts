@@ -48,6 +48,12 @@ export class StickerService {
     return { unlocked: true };
   }
 
+  /** Take back every unlock of stickers whose id starts with `prefix` (danger-zone resets). Returns rows removed. */
+  revokePrefix(prefix: string): number {
+    if (prefix.length < 2) throw new Error('Sticker prefix too short: refusing to wipe the whole book');
+    return run(this.db, "DELETE FROM sticker_unlocks WHERE substr(sticker_id, 1, ?) = ?", prefix.length, prefix).changes;
+  }
+
   unlockedBy(attendeeId: number): Record<string, number> {
     const rows = all<{ sticker_id: string; at: number }>(this.db, 'SELECT sticker_id, at FROM sticker_unlocks WHERE attendee_id = ?', attendeeId);
     return Object.fromEntries(rows.map((r) => [r.sticker_id, r.at]));

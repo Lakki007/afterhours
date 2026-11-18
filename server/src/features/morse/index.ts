@@ -778,8 +778,8 @@ export const morse = defineFeature({
       parse(ResetRequestSchema, req.body);
       tx(ctx.db, () => {
         for (const t of ['morse_feed', 'morse_sprint_scores', 'morse_sprints', 'morse_best', 'morse_rounds']) run(ctx.db, `DELETE FROM ${t}`);
-        run(ctx.db, "DELETE FROM points_ledger WHERE source = 'morse' OR source LIKE 'morse.%'");
-        run(ctx.db, "DELETE FROM sticker_unlocks WHERE sticker_id LIKE 'morse-%'");
+        ctx.points.revokeSource('morse');
+        ctx.stickers.revokePrefix('morse-');
       });
       const s = state(ctx);
       s.clears = null;

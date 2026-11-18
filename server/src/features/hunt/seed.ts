@@ -1,9 +1,11 @@
-// Demo content: a 7 stop campus hunt for a tech afternoon, plus a believable crowd mid-hunt.
+// Demo content. Trail 1: a campus treasure hunt with a believable crowd mid-hunt. Trail 2: a Morse trail
+// (objects around the venue carrying Morse). Trail 3: a Morse slip trail (kit slips whose four orientations
+// branch). Trail 4: a slip hunt where your kit slip's orientation picks your first location.
 // Stickers go where `location` says; adjust the places to the real venue before printing.
 import type { HuntStopInput } from '@afterhours/shared/features/hunt';
 import { type FeatureContext, all, one, run } from '../../core';
-import { getState, loadStops, newCode, newToken, bump, solveStop } from './engine';
-import { stopOrder } from './rules';
+import { slipMorseKey } from '@afterhours/shared/features/hunt';
+import { bump, getTrail, loadStops, newCode, newSeed, newToken, orderFor, solveStop } from './engine';
 
 export const DEMO_STOPS: HuntStopInput[] = [
   {
@@ -98,45 +100,180 @@ export const DEMO_STOPS: HuntStopInput[] = [
 
 export function seedHunt(ctx: FeatureContext): void {
   if ((one<{ n: number }>(ctx.db, 'SELECT COUNT(*) AS n FROM hunt_stops')?.n ?? 0) > 0) return;
-  DEMO_STOPS.forEach((raw, i) => {
-    run(
-      ctx.db,
-      `INSERT INTO hunt_stops (position, title, clue, clue_image, answers, hints, points, glyph, color, reveal, location, token, code)
-       VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      i + 1,
-      raw.title,
-      raw.clue,
-      JSON.stringify(raw.answers ?? []),
-      JSON.stringify(raw.hints ?? []),
-      raw.points ?? 10,
-      raw.glyph ?? 'star',
-      raw.color ?? 'tangerine',
-      raw.reveal ?? '',
-      raw.location ?? '',
-      newToken(),
-      newCode(ctx),
-    );
-  });
+  DEMO_STOPS.forEach((raw) => addStop(ctx, 1, raw));
   const now = ctx.now();
-  run(ctx.db, "UPDATE hunt_state SET status = 'open', opened_at = ?, title = ? WHERE id = 1", now - 45 * 60_000, 'the after hours hunt');
+  run(ctx.db, "UPDATE hunt_trails SET status = 'open', opened_at = ?, title = ? WHERE id = 1", now - 45 * 60_000, 'the after hours hunt');
 
   // A crowd part way through, so the board and counters look alive. Demo kits AH-001..006 stay untouched.
   const crowd = all<{ id: number }>(ctx.db, "SELECT id FROM attendees WHERE profile_complete = 1 AND kit_id > 'AH-006' ORDER BY id");
-  const stops = loadStops(ctx);
-  const seed = getState(ctx).seed;
+  const stops = loadStops(ctx, 1);
+  const trail = getTrail(ctx, 1);
   crowd.forEach((a, i) => {
     if (i >= 18) return;
     // 3 finish, the rest are spread over the route.
     const progress = i < 3 ? stops.length : (i * 5) % stops.length;
     const startedMin = 40 - i;
     const startedAt = now - startedMin * 60_000;
-    run(ctx.db, 'INSERT INTO hunt_players (attendee_id, started_at, last_at) VALUES (?, ?, ?)', a.id, startedAt, startedAt);
-    const order = stopOrder(seed, a.id, stops.map((s) => s.id));
+    run(ctx.db, 'INSERT INTO hunt_players (trail_id, attendee_id, started_at, last_at) VALUES (1, ?, ?, ?)', a.id, startedAt, startedAt);
+    const order = orderFor(trail, a.id, stops.map((s) => s.id));
     const per = i < 3 ? (14 + i * 5) / stops.length : 4;
     for (let k = 0; k < progress; k++) {
       const stop = stops.find((s) => s.id === order[k]);
       if (stop) solveStop(ctx, a.id, stop, k % 3 === 0 ? 'qr' : 'answer', startedAt + Math.round((k + 1) * per * 60_000));
     }
   });
+  seedMorseTrail(ctx);
+  seedSlipTrail(ctx);
+  seedSlipHunt(ctx);
   bump(ctx);
+}
+
+interface SeedStop extends Partial<HuntStopInput> {
+  title: string;
+  clue: string;
+}
+
+function addTrail(ctx: FeatureContext, kind: 'hunt' | 'morse' | 'other', title: string, orderMode: 'shuffled' | 'fixed' | 'graph', status: 'draft' | 'open' = 'open'): number {
+  const pos = (one<{ m: number | null }>(ctx.db, 'SELECT MAX(position) AS m FROM hunt_trails')?.m ?? 0) + 1;
+  return run(
+    ctx.db,
+    'INSERT INTO hunt_trails (position, kind, title, status, order_mode, hints_on, cooldown_on, shuffle_seed, opened_at) VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?)',
+    pos,
+    kind,
+    title,
+    status,
+    orderMode,
+    newSeed(),
+    status === 'open' ? ctx.now() : null,
+  ).lastId;
+}
+
+function addStop(ctx: FeatureContext, trailId: number, raw: SeedStop): number {
+  const pos = (one<{ m: number | null }>(ctx.db, 'SELECT MAX(position) AS m FROM hunt_stops WHERE trail_id = ?', trailId)?.m ?? 0) + 1;
+  const answers = raw.answers ?? [];
+  const challenge = raw.challenge ?? (raw.slipId ? 'slip' : answers.length ? 'riddle' : 'scan');
+  return run(
+    ctx.db,
+    `INSERT INTO hunt_stops (trail_id, position, title, clue, clue_image, challenge, require_scan, online_fallback, slip_id, next_stop_id, is_finale,
+                             answers, hints, points, glyph, color, reveal, location, token, code)
+     VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    trailId,
+    pos,
+    raw.title,
+    raw.clue,
+    challenge,
+    raw.requireScan ? 1 : 0,
+    raw.onlineFallback ? 1 : 0,
+    raw.slipId ?? null,
+    raw.nextStopId ?? null,
+    raw.finale ? 1 : 0,
+    JSON.stringify(answers),
+    JSON.stringify(raw.hints ?? []),
+    raw.points ?? 10,
+    raw.glyph ?? 'star',
+    raw.color ?? 'tangerine',
+    raw.reveal ?? '',
+    raw.location ?? '',
+    newToken(),
+    newCode(ctx),
+  ).lastId;
+}
+
+const setNext = (ctx: FeatureContext, stopId: number, nextId: number | null) => run(ctx.db, 'UPDATE hunt_stops SET next_stop_id = ? WHERE id = ?', nextId, stopId);
+
+interface SeedReading {
+  orientation: 'bottom' | 'right' | 'top' | 'left' | 'extra';
+  word?: string;
+  morse?: string;
+  outcome: 'next' | 'branch' | 'clue' | 'bonus' | 'decoy';
+  target?: number;
+  clue?: string;
+  bonus?: number;
+  message?: string;
+}
+
+function addSlip(ctx: FeatureContext, setId: number, slipNo: number, label: string, readings: SeedReading[]): number {
+  const id = run(ctx.db, 'INSERT INTO hunt_slips (set_id, slip_no, label) VALUES (?, ?, ?)', setId, slipNo, label).lastId;
+  for (const r of readings) {
+    run(
+      ctx.db,
+      `INSERT INTO hunt_slip_readings (slip_id, orientation, word, morse, outcome, target_stop_id, clue, bonus_points, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      r.orientation,
+      r.word ?? null,
+      r.morse ? slipMorseKey(r.morse) : null,
+      r.outcome,
+      r.target ?? null,
+      r.clue ?? '',
+      r.bonus ?? 0,
+      r.message ?? '',
+    );
+  }
+  return id;
+}
+
+/** Trail 2: Morse messages on objects around the venue. Two need their QR scanned first, one can play online. */
+function seedMorseTrail(ctx: FeatureContext): void {
+  const t = addTrail(ctx, 'morse', 'the morse trail', 'shuffled');
+  const stops: SeedStop[] = [
+    { title: 'the notice board', clue: 'Something on the club notice board is tapping out a word. Decode the card and type it.', answers: ['BYTE'], challenge: 'morse', location: 'Club notice board', glyph: 'wave', color: 'sky', reveal: 'Eight bits, one byte, one very old joke about nibbles.' },
+    { title: 'the lab door', clue: 'The computer lab door has a card on it. Scan its QR to prove you found it, then decode the dots.', answers: ['CODE'], challenge: 'morse', requireScan: true, location: 'Computer lab door', glyph: 'key', color: 'lime', reveal: 'Morse is a code too. You just compiled it by hand.' },
+    { title: 'the canteen', clue: 'Near the chai counter, a card loops forever. Find it, scan it, decode it.', answers: ['LOOP'], challenge: 'morse', requireScan: true, location: 'Canteen chai counter', glyph: 'bolt', color: 'tangerine', reveal: 'while (chai) { talk(); }' },
+    { title: 'the big screen', clue: 'No card for this one: tap "play it" and listen (or watch the flash). What does it say?', answers: ['PIXEL'], challenge: 'morse', onlineFallback: true, location: 'Projector (online stop)', glyph: 'star', color: 'pink', reveal: 'The projector has about two million of these.' },
+    { title: 'the club room', clue: 'Last one. The Recurse banner hides our favourite word in Morse. Decode it to finish.', answers: ['RECURSE'], challenge: 'morse', location: 'Recurse banner, club room', glyph: 'crown', color: 'sun', points: 15, reveal: 'Recurse: a function calling itself, and a club calling you back.' },
+  ];
+  stops.forEach((st) => addStop(ctx, t, { hints: ['Use the chart: dots are short, dashes are long.'], ...st }));
+}
+
+/**
+ * Trail 3: a Morse slip trail (graph). Three slips come in every kit. Each slip's edges send you to
+ * different stops; one edge on slip 1 is a decoy (the upside-down top strip), one on slip 2 is a bonus.
+ */
+function seedSlipTrail(ctx: FeatureContext): void {
+  const t = addTrail(ctx, 'morse', 'the slip trail', 'graph');
+  const set = run(ctx.db, "INSERT INTO hunt_slip_sets (trail_id, title, mode, word_pool) VALUES (?, 'kit slips', 'shared', '[]')", t).lastId;
+  // stops first (slip ids patched in after the slips exist)
+  const start = addStop(ctx, t, { title: 'slip 1: the start', clue: 'Take slip 1 from your kit. Scan it. Then turn it: each edge says something different.', challenge: 'slip', glyph: 'flag', color: 'lime' });
+  const lab = addStop(ctx, t, { title: 'slip 2: the lab path', clue: 'You took the lab path. Grab slip 2 and find the edge that sends you on.', challenge: 'slip', glyph: 'key', color: 'sky', location: 'Computer lab' });
+  const stage = addStop(ctx, t, { title: 'slip 2: the stage path', clue: 'You took the stage path. Scan slip 2. One edge is worth more than it looks.', challenge: 'slip', glyph: 'star', color: 'pink', location: 'Main stage' });
+  const meet = addStop(ctx, t, { title: 'slip 3: where paths meet', clue: 'Both paths meet here. Slip 3, any edge that reads as a word you know.', challenge: 'slip', glyph: 'wave', color: 'sun' });
+  const finale = addStop(ctx, t, { title: 'the last word', clue: 'Type the word that ties it all together: the name of our club.', answers: ['recurse'], finale: true, glyph: 'crown', color: 'grape', points: 20 });
+  const s1 = addSlip(ctx, set, 1, 'start', [
+    { orientation: 'bottom', word: 'LAB', outcome: 'next', target: lab, message: 'The bottom edge says LAB. Head to the computer lab path.' },
+    { orientation: 'left', word: 'STAGE', outcome: 'branch', target: stage, message: 'The left edge says STAGE. A different path: off to the stage.' },
+    { orientation: 'right', word: 'HINT', outcome: 'clue', clue: 'Every slip has a word you would expect at a tech club. Look for it.' },
+    { orientation: 'top', word: 'NOPE', outcome: 'decoy', message: 'NOPE is literally a decoy. Turn it again.' },
+    // the top strip read upside down (its sequence reversed) is a planted decoy too
+    { orientation: 'extra', morse: '. .--. --- .-', outcome: 'decoy', message: 'Upside down! Clever, but that is not a way forward.' },
+  ]);
+  const s2 = addSlip(ctx, set, 2, 'paths', [
+    { orientation: 'bottom', word: 'MEET', outcome: 'next', target: meet, message: 'MEET: go to where the paths meet.' },
+    { orientation: 'right', word: 'GIFT', outcome: 'bonus', bonus: 10, message: 'A hidden GIFT: +10 points.' },
+    { orientation: 'left', word: 'BACK', outcome: 'decoy', message: 'BACK? No going back. Try another edge.' },
+  ]);
+  const s3 = addSlip(ctx, set, 3, 'meet', [
+    { orientation: 'bottom', word: 'END', outcome: 'next', target: finale, message: 'END: the finale is open.' },
+    { orientation: 'top', word: 'LOOP', outcome: 'clue', clue: 'A loop goes round and round. The finale word does too, in a way.' },
+  ]);
+  run(ctx.db, 'UPDATE hunt_stops SET slip_id = ? WHERE id = ?', s1, start);
+  run(ctx.db, 'UPDATE hunt_stops SET slip_id = ? WHERE id IN (?, ?)', s2, lab, stage);
+  run(ctx.db, 'UPDATE hunt_stops SET slip_id = ? WHERE id = ?', s3, meet);
+}
+
+/** Trail 4: a treasure hunt variant. Your kit slip's orientation decides which venue location you go to first. */
+function seedSlipHunt(ctx: FeatureContext): void {
+  const t = addTrail(ctx, 'other', 'the slip hunt', 'graph');
+  const set = run(ctx.db, "INSERT INTO hunt_slip_sets (trail_id, title, mode, word_pool) VALUES (?, 'kit slip: first location', 'shared', '[]')", t).lastId;
+  const start = addStop(ctx, t, { title: 'your kit slip', clue: 'Hold your kit slip any way up and scan it. The edge at the bottom decides where you start.', challenge: 'slip', glyph: 'map', color: 'sun' });
+  const lib = addStop(ctx, t, { title: 'the library', clue: 'Find the sticker by the library entrance and scan it.', challenge: 'scan', location: 'Library entrance', glyph: 'note', color: 'sky' });
+  const canteen = addStop(ctx, t, { title: 'the canteen', clue: 'Find the sticker at the chai counter and scan it.', challenge: 'scan', location: 'Canteen chai counter', glyph: 'bolt', color: 'tangerine' });
+  const lab = addStop(ctx, t, { title: 'the lab', clue: 'Find the sticker on the lab door and scan it.', challenge: 'scan', location: 'Computer lab door', glyph: 'key', color: 'lime' });
+  const finale = addStop(ctx, t, { title: 'hello, world', clue: 'Everyone ends here. Two words every programmer typed first.', answers: ['hello world'], finale: true, glyph: 'flag', color: 'pink', points: 15, location: 'Main stage' });
+  for (const id of [lib, canteen, lab]) setNext(ctx, id, finale);
+  const slip = addSlip(ctx, set, 1, 'first location', [
+    { orientation: 'bottom', word: 'BOOK', outcome: 'next', target: lib, message: 'BOOK: start at the library.' },
+    { orientation: 'right', word: 'CHAI', outcome: 'next', target: canteen, message: 'CHAI: start at the canteen.' },
+    { orientation: 'left', word: 'CODE', outcome: 'next', target: lab, message: 'CODE: start at the lab.' },
+  ]);
+  run(ctx.db, 'UPDATE hunt_stops SET slip_id = ? WHERE id = ?', slip, start);
 }

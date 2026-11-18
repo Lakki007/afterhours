@@ -77,6 +77,29 @@ export class PointsService {
     return { awarded: true, total };
   }
 
+  /**
+   * Take back awards (danger-zone resets). `revoke(source)` removes every row from that source and its
+   * sub-sources ("morse" also takes "morse.sprint"); `revoke(source, ref)` removes one award.
+   * Returns rows removed and tells the leaderboard.
+   */
+  revoke(source: string, ref?: string): number {
+    if (!SOURCE_RE.test(source)) throw new Error(`Bad award source "${source}"`);
+    const r =
+      ref === undefined
+        ? run(this.db, "DELETE FROM points_ledger WHERE source = ? OR source LIKE ? || '.%'", source, source)
+        : run(this.db, 'DELETE FROM points_ledger WHERE source = ? AND ref = ?', source, ref);
+    if (r.changes > 0) {
+      this.version++;
+      this.scheduleChanged();
+    }
+    return r.changes;
+  }
+
+  /** Alias kept for the danger zones: every award from a source and its sub-sources. */
+  revokeSource(source: string): number {
+    return this.revoke(source);
+  }
+
   /** Has this exact award been made? */
   has(attendeeId: number, source: string, ref: string): boolean {
     return !!one(this.db, 'SELECT 1 AS x FROM points_ledger WHERE attendee_id = ? AND source = ? AND ref = ?', attendeeId, source, ref);

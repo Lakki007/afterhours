@@ -451,7 +451,7 @@ export const arcade = defineFeature({
       tx(ctx.db, () => {
         run(ctx.db, 'DELETE FROM arcade_runs');
         run(ctx.db, 'DELETE FROM arcade_best');
-        run(ctx.db, "DELETE FROM points_ledger WHERE source LIKE 'arcade.%'");
+        ctx.points.revokeSource('arcade');
       });
       ctx.points.invalidate();
       const s = state(ctx);
