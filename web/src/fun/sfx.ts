@@ -180,11 +180,48 @@ export const sfx = {
       osc.stop(t + 0.03);
     };
   },
+  /**
+   * Morse-style on/off pattern, scheduled on the AudioContext clock (osc.start(t)/stop(t),
+   * never setTimeout). `segments` alternate on, off, on... in ms, starting `delayMs` from now.
+   * Returns stop(). Silent (no-op) when muted or before a gesture: callers flash/vibrate too.
+   */
+  pattern(segments: readonly number[], delayMs: number, freq = 650): () => void {
+    const ac = ready();
+    if (!ac || !master) return () => {};
+    const g = ac.createGain();
+    g.gain.value = 0;
+    g.connect(master);
+    const osc = ac.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc.connect(g);
+    let t = ac.currentTime + delayMs / 1000;
+    const start = t;
+    segments.forEach((ms, i) => {
+      const d = ms / 1000;
+      if (i % 2 === 0) {
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.22, t + 0.005);
+        g.gain.setValueAtTime(0.22, t + Math.max(0.006, d - 0.006));
+        g.gain.linearRampToValueAtTime(0, t + d);
+      }
+      t += d;
+    });
+    osc.start(start);
+    osc.stop(t + 0.05);
+    return () => {
+      try {
+        osc.stop();
+      } catch {
+        /* already stopped */
+      }
+    };
+  },
   /** One note, for feature-specific jingles. */
   note: (freq: number, durMs = 120, type: OscillatorType = 'triangle') => play([{ freq, dur: durMs / 1000, type }]),
 };
 
-export type SfxName = Exclude<keyof typeof sfx, 'tone' | 'note'>;
+export type SfxName = Exclude<keyof typeof sfx, 'tone' | 'note' | 'pattern'>;
 
 export function isMuted(): boolean {
   return muted;
