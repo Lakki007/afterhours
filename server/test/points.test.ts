@@ -127,3 +127,33 @@ describe('stickers', () => {
     ).toThrow();
   });
 });
+
+describe('revoking (danger-zone resets)', () => {
+  let t: TestApp;
+  beforeEach(async () => {
+    t = await makeApp();
+  });
+  afterEach(async () => t.close());
+
+  it('revoke(source) takes a source and its sub-sources, revoke(source, ref) one award; revokePrefix takes stickers', async () => {
+    const [kit] = await makeKits(t.app, 1);
+    const a = await signedInAttendee(t.app, kit!, 'rev');
+    const base = t.ctx.points.total(a.id);
+    t.ctx.points.award({ attendeeId: a.id, source: 'morse', ref: 'r1', points: 5 });
+    t.ctx.points.award({ attendeeId: a.id, source: 'morse.sprint', ref: 's1', points: 3 });
+    t.ctx.points.award({ attendeeId: a.id, source: 'morsel', ref: 'm1', points: 2 }); // not a sub-source
+    t.ctx.points.award({ attendeeId: a.id, source: 'hunt', ref: 'stop:1', points: 4 });
+    t.ctx.points.award({ attendeeId: a.id, source: 'hunt', ref: 'stop:2', points: 6 });
+    expect(t.ctx.points.revokeSource('morse')).toBe(2);
+    expect(t.ctx.points.revoke('hunt', 'stop:1')).toBe(1);
+    expect(t.ctx.points.total(a.id)).toBe(base + 2 + 6);
+    // revoked awards can be earned again
+    expect(t.ctx.points.award({ attendeeId: a.id, source: 'morse', ref: 'r1', points: 5 }).awarded).toBe(true);
+    const before = Object.keys(t.ctx.stickers.unlockedBy(a.id));
+    t.ctx.stickers.register([{ id: 'zz-one', title: 'x', hint: '', shape: 'star', color: 'lime', glyph: 'star', feature: 'x' }]);
+    t.ctx.stickers.unlock(a.id, 'zz-one');
+    expect(t.ctx.stickers.revokePrefix('zz-')).toBe(1);
+    expect(Object.keys(t.ctx.stickers.unlockedBy(a.id))).toEqual(before);
+    expect(() => t.ctx.stickers.revokePrefix('z')).toThrow();
+  });
+});
