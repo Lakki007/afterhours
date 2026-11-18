@@ -61,7 +61,7 @@ test.describe.serial('after hours foundation', () => {
     await p.getByRole('button', { name: 'make them' }).click();
     await expect(p.getByText('fresh kits, passwords inside')).toBeVisible();
     await expect(p.getByTestId('kit-row-AH-001')).toBeVisible();
-    await p.waitForTimeout(1800);
+    await p.waitForTimeout(4500);
     await p.screenshot({ path: `${SHOTS}/console-kits.png` });
 
     // CSV download
@@ -115,7 +115,7 @@ test.describe.serial('after hours foundation', () => {
     await page.getByRole('tab', { name: 'eyes' }).click();
     await page.getByRole('option', { name: 'stars' }).click();
     await page.getByRole('button', { name: 'boop your avatar' }).click();
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(3200);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${SHOTS}/attendee-avatar-builder.png` });
@@ -128,7 +128,7 @@ test.describe.serial('after hours foundation', () => {
     await expect(page.getByRole('alertdialog')).toContainText('new face');
     await page.getByRole('button', { name: 'stick it in' }).click();
     await expect(page.getByText('hype the room')).toBeVisible();
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(4500);
     await page.screenshot({ path: `${SHOTS}/attendee-home.png` });
 
     await page.getByRole('link', { name: 'stickers' }).click();

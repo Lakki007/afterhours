@@ -15,8 +15,6 @@
 
 /* --------------------------------------------------------------- button */
 .btn {
-  --bg: var(--tangerine);
-  --fg: var(--ink);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -24,8 +22,8 @@
   gap: var(--s-2);
   min-height: var(--tap);
   padding: 0 var(--s-5);
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--bg, var(--tangerine));
+  color: var(--fg, var(--ink));
   border: var(--outline);
   border-radius: var(--cut-3);
   box-shadow: var(--shadow);
@@ -65,11 +63,9 @@
 
 /* ----------------------------------------------------------------- card */
 .card {
-  --bg: var(--paper-3);
-  --fg: var(--ink);
   position: relative;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--bg, var(--paper-3));
+  color: var(--fg, var(--ink));
   border: var(--outline);
   border-radius: var(--cut-1);
   box-shadow: var(--shadow);
@@ -204,7 +200,8 @@
 /* ---------------------------------------------------------------- toast */
 .toasts {
   position: fixed;
-  top: calc(10px + env(safe-area-inset-top));
+  /* bottom, above the attendee nav: a top toast covers page headings */
+  bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   z-index: var(--z-toast);
@@ -215,8 +212,6 @@
   padding: 0 var(--s-4);
 }
 .toast {
-  --bg: var(--sun);
-  --fg: var(--ink);
   pointer-events: auto;
   position: relative;
   display: flex;
@@ -224,8 +219,8 @@
   gap: var(--s-3);
   max-width: 420px;
   padding: 12px 16px;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--bg, var(--sun));
+  color: var(--fg, var(--ink));
   border: var(--outline);
   border-radius: var(--cut-2);
   box-shadow: var(--shadow);

@@ -1,0 +1,13 @@
+# Caddy terminates HTTPS (automatic Let's Encrypt certificates) and proxies to the app.
+# DOMAIN and ACME_EMAIL come from .env via docker-compose.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	# flush_interval -1: do not buffer, so the /api/live event stream arrives instantly.
+	reverse_proxy app:8080 {
+		flush_interval -1
+	}
+}

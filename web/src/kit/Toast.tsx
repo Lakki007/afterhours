@@ -1,5 +1,5 @@
 /*
-  Toasts: sticky-note messages that drop from the top.
+  Toasts: sticky-note messages that pop up from the bottom, above the nav.
     const toast = useToast();
     toast('saved', { kind: 'good' });
     toast('nope', { kind: 'bad', title: 'wrong code', icon: 'close' });
@@ -78,7 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     remove(t.id);
                   }
                 }}
-                initial={reduce ? { opacity: 0 } : { y: -80, rotate: t.rot * 3, opacity: 0, scale: 0.8 }}
+                initial={reduce ? { opacity: 0 } : { y: 80, rotate: t.rot * 3, opacity: 0, scale: 0.8 }}
                 animate={{ y: 0, rotate: t.rot, opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, x: 120, transition: { duration: 0.2 } }}
                 transition={{ type: 'spring', stiffness: 500, damping: 24 }}

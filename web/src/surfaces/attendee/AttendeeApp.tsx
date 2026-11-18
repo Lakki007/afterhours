@@ -18,7 +18,7 @@ function LiveReactors() {
   const toast = useToast();
   useLiveEvent('points.awarded', (d) => {
     void qc.invalidateQueries({ queryKey: qk.points });
-    toast(d.label ?? d.source, { kind: 'points', title: `+${d.points} points` });
+    toast(d.label ?? d.source, { kind: 'points', title: `+${d.points} points`, ms: 2400 });
   });
   useLiveEvent('presence.changed', (d) => qc.setQueryData(qk.presence, d));
   useLiveEvent('session.revoked', () => {

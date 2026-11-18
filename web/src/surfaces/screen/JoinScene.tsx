@@ -16,7 +16,7 @@ export function JoinScene() {
   return (
     <div className={s.join}>
       <div className={s.joinLeft}>
-        <Wordmark size={px * 1.5} />
+        <Wordmark size={px * 1.05} />
         <h2 className={s.joinHead}>
           grab your phone.
           <Scribble color="var(--pink)" className={s.joinScribble} />

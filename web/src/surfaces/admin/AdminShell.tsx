@@ -18,7 +18,7 @@ interface NavEntry {
 }
 
 const CORE: NavEntry[] = [
-  { path: 'kits', label: 'kits and sign-ins', icon: 'ticket' },
+  { path: 'kits', label: 'kits', icon: 'ticket' },
   { path: 'projector', label: 'projector', icon: 'screen' },
 ];
 const NAV: NavEntry[] = [...CORE, ...consolePanels.map((p) => ({ path: p.path, label: p.label, icon: p.icon }))];

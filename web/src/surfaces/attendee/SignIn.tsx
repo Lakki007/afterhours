@@ -139,10 +139,7 @@ export function SignIn() {
         </Card>
       </form>
 
-      <p className={s.desk}>
-        no card? the entry desk will sort you out.
-        <Doodle name="arrow" size={26} style={{ transform: 'rotate(100deg)', marginLeft: 6 }} />
-      </p>
+      <p className={s.desk}>no card? ask at the entry desk.</p>
     </div>
   );
 }

@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.claude
+.playwright
+test-results
+playwright-report
+data
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+docs/screens

@@ -24,12 +24,12 @@
 .bar { display: grid; gap: var(--s-3); }
 .barTitle { font-size: var(--step-1); transform: rotate(-1deg); }
 .barHint { font-family: var(--font-hand); font-weight: 600; color: var(--ink-soft); font-size: var(--step--1); }
-.row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
 .pad {
   --bg: var(--paper-3);
   position: relative;
   aspect-ratio: 1;
-  min-height: 48px;
+  min-height: 44px;
   display: grid;
   place-items: center;
   background: var(--bg);
