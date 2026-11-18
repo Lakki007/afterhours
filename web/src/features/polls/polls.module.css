@@ -78,7 +78,7 @@
 .takeoverCard { position: relative; width: 100%; max-width: var(--page-max); margin: 0 auto; background: var(--sun); border: var(--line-fat) solid var(--ink); border-radius: var(--cut-1); box-shadow: var(--shadow-lg); padding: var(--s-5) var(--s-4) var(--s-4); display: grid; gap: var(--s-3); }
 .takeoverClose { position: absolute; top: -14px; right: -6px; }
 .later { justify-self: center; }
-.pill { position: fixed; z-index: var(--z-overlay); right: 12px; top: calc(10px + env(safe-area-inset-top)); display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px; font-family: var(--font-display); font-size: var(--step--1); color: var(--ink); background: var(--paper-3); border: var(--outline); border-radius: var(--cut-3); box-shadow: var(--shadow); cursor: pointer; }
+.pill { position: fixed; z-index: var(--z-overlay); left: 12px; bottom: calc(var(--nav-h) + 12px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px; font-family: var(--font-display); font-size: var(--step--1); color: var(--ink); background: var(--paper-3); border: var(--outline); border-radius: var(--cut-3); box-shadow: var(--shadow); cursor: pointer; }
 .pillHot { background: var(--lime); animation: nudge 1.6s var(--ease-pop) infinite; }
 @keyframes nudge { 0%, 80%, 100% { transform: rotate(-3deg); } 88% { transform: rotate(4deg) scale(1.06); } }
 @media (prefers-reduced-motion: reduce) { .pillHot { animation: none; } }
