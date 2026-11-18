@@ -1,16 +1,27 @@
-// Web side of the hunt feature. Stub: replace Soon with your screens (docs/EXTENDING.md).
-// The base route /hunt is fixed: the schedule feature deep-links to it.
+/*
+  Treasure hunt (spec 5.5): /hunt passport + clue, /hunt/s/:token sticker landing,
+  a home card, the console and the projector map.
+  Server side: server/src/features/hunt.
+*/
+import { lazy } from 'react';
+import type { SceneStatus } from '../../core/feature';
 import { defineFeature } from '../../core/feature';
-import { EmptyState } from '../../kit';
+import { HuntHomeCard, HuntPage, HuntScanLanding } from './Attendee';
+import { useHuntBoard } from './useHunt';
 
-function Soon() {
-  return <EmptyState title="coming up" hint="this part of the app is still being built." />;
+function useHuntSceneStatus(): SceneStatus {
+  const b = useHuntBoard();
+  return b.data?.status === 'open' || (b.data?.finishers.length ?? 0) > 0 ? 'available' : 'off';
 }
 
 export const hunt = defineFeature({
   name: 'hunt',
   routes: [
-    { path: 'hunt', Component: Soon },
-    { path: 'hunt/s/:token', Component: Soon },
+    { path: 'hunt', Component: HuntPage },
+    { path: 'hunt/s/:token', Component: HuntScanLanding },
   ],
+  home: { order: 30, Card: HuntHomeCard },
+  nav: { order: 20, label: 'hunt', to: '/hunt', icon: 'map' },
+  console: { order: 40, label: 'hunt', path: 'hunt', icon: 'map', Panel: lazy(() => import('./Console')) },
+  scenes: [{ id: 'hunt', label: 'hunt map', Component: lazy(() => import('./Scene')), useStatus: useHuntSceneStatus, order: 30, durationMs: 15000 }],
 });
