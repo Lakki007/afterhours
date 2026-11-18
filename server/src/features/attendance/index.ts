@@ -39,6 +39,8 @@ import {
   run,
   tx,
 } from '../../core';
+// Read-only: check-ins belong to schedule activities.
+import { loadRows as scheduleRows } from '../schedule/service';
 
 /** Check-ins that earn the bigger stickers. */
 export const REGULAR_AT = 3;
@@ -114,6 +116,13 @@ function codeMatches(secret: Buffer, activityId: string, now: number, code: stri
     if (want.length === given.length && timingSafeEqual(want, given)) ok = true;
   }
   return ok;
+}
+
+/** The schedule activity behind a check-in id, or a 404. */
+function scheduleActivity(ctx: FeatureContext, activityId: string): { id: number; title: string } {
+  const row = /^\d+$/.test(activityId) ? scheduleRows(ctx).find((r) => r.id === Number(activityId)) : undefined;
+  if (!row) throw notFound("That activity isn't on the schedule.");
+  return row;
 }
 
 const countFor = (db: Db, activityId: string): number =>
@@ -361,6 +370,8 @@ export const attendance = defineFeature({
     app.post('/admin/open', async (req): Promise<AdminWindow> => {
       requireAdmin(req);
       const b = parse(OpenCheckinRequestSchema, req.body);
+      const activity = scheduleActivity(ctx, b.activityId);
+      const title = b.title ?? activity.title;
       const now = ctx.now();
       if (b.closesAt != null && b.closesAt <= now) throw badRequest('The auto-close time is already past.');
       run(
@@ -368,7 +379,7 @@ export const attendance = defineFeature({
         `INSERT INTO attendance_windows (activity_id, title, is_open, opened_at, closed_at, closes_at) VALUES (?, ?, 1, ?, NULL, ?)
          ON CONFLICT(activity_id) DO UPDATE SET title = excluded.title, is_open = 1, opened_at = excluded.opened_at, closed_at = NULL, closes_at = excluded.closes_at`,
         b.activityId,
-        b.title,
+        title,
         now,
         b.closesAt ?? null,
       );
@@ -439,18 +450,25 @@ export const attendance = defineFeature({
 
   tick: { everyMs: 1000, run: tick },
 
+  // Check-ins hang off real schedule activities, so the schedule seeds first.
+  seedAfter: ['schedule'],
+
   seed(ctx) {
-    // Activity ids "1".."3" line up with the first three schedule rows of the demo; the console re-titles on open.
     const crowd = all<{ id: number }>(ctx.db, 'SELECT id FROM attendees WHERE profile_complete = 1 ORDER BY id');
     const now = ctx.now();
-    const plan = [
-      { id: '1', title: 'Opening and ground rules', share: 0.95, ago: 38 },
-      { id: '2', title: 'Lightning talks: things we broke this semester', share: 0.7, ago: 20 },
-      { id: '3', title: 'Pizza and bug bounty', share: 0.4, ago: 6 },
+    // The first three activities of the demo afternoon: two closed check-ins and one still open.
+    const shape = [
+      { share: 0.95, ago: 38 },
+      { share: 0.7, ago: 20 },
+      { share: 0.4, ago: 6 },
     ];
+    const plan = scheduleRows(ctx)
+      .slice(0, shape.length)
+      .map((r, i) => ({ id: String(r.id), title: r.title, ...shape[i]! }));
+    const lastId = plan.at(-1)?.id;
     for (const p of plan) {
       const t0 = now - p.ago * 60_000;
-      run(ctx.db, 'INSERT OR IGNORE INTO attendance_windows (activity_id, title, is_open, opened_at, closed_at, closes_at) VALUES (?, ?, ?, ?, ?, NULL)', p.id, p.title, p.id === '3' ? 1 : 0, t0, p.id === '3' ? null : t0 + 8 * 60_000);
+      run(ctx.db, 'INSERT OR IGNORE INTO attendance_windows (activity_id, title, is_open, opened_at, closed_at, closes_at) VALUES (?, ?, ?, ?, ?, NULL)', p.id, p.title, p.id === lastId ? 1 : 0, t0, p.id === lastId ? null : t0 + 8 * 60_000);
       const n = Math.round(crowd.length * p.share);
       crowd.slice(0, n).forEach((c, i) => {
         run(ctx.db, "INSERT OR IGNORE INTO attendance_checkins (attendee_id, activity_id, at, method) VALUES (?, ?, ?, 'code')", c.id, p.id, t0 + 20_000 + i * 15_000);

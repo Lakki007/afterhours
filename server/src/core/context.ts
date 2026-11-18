@@ -47,6 +47,8 @@ export interface ServerFeature {
   tick?: { everyMs: number; run: (ctx: FeatureContext) => void | Promise<void> };
   /** `npm run seed`: insert believable demo data. Runs after core seed, inside no transaction. */
   seed?: (ctx: FeatureContext) => void | Promise<void>;
+  /** Feature names whose seed must run before this one (e.g. attendance needs schedule's activities). */
+  seedAfter?: string[];
 }
 
 /** Identity helper so feature objects are type-checked where they are written. */

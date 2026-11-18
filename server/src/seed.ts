@@ -12,6 +12,7 @@ import { generateKits } from './core/auth/kits';
 import { one, run } from './core/db';
 import { loadDotEnv } from './env';
 import { features } from './features/registry';
+import { seedOrder } from './core/seedOrder';
 
 loadDotEnv();
 const config = loadConfig();
@@ -101,7 +102,7 @@ if (sana) {
   ctx.points.award({ attendeeId: id, source: 'demo', ref: 'warmup', points: 35, label: 'demo points' });
 }
 
-for (const f of features) {
+for (const f of seedOrder(features)) {
   if (f.seed) {
     await f.seed(ctx);
     console.log(`seeded feature: ${f.name}`);

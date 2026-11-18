@@ -10,12 +10,21 @@ describe('attendance feature', () => {
   beforeEach(async () => {
     t = await makeApp();
     admin = await adminJar(t.app);
+    await activities();
   });
   afterEach(async () => t.close());
 
-  const open = (activityId = 'a1', title = 'Opening', extra: object = {}) => req(t.app, admin, 'POST', '/api/attendance/admin/open', { activityId, title, ...extra });
+  /** Check-ins belong to schedule activities: make ids 1..4 in the fresh DB. */
+  const activities = async () => {
+    const t0 = t.clock.now();
+    for (let i = 0; i < 4; i++) {
+      const r = await req(t.app, admin, 'POST', '/api/schedule', { title: `Act ${i + 1}`, startAt: t0 + i * 3_600_000, endAt: t0 + (i + 1) * 3_600_000 - 60_000 });
+      expect(r.statusCode).toBe(200);
+    }
+  };
+  const open = (activityId = '1', title = 'Opening', extra: object = {}) => req(t.app, admin, 'POST', '/api/attendance/admin/open', { activityId, title, ...extra });
   const screen = async () => (await req(t.app, admin, 'GET', '/api/attendance/screen')).json() as ScreenCheckins;
-  const codeOf = async (id = 'a1') => (await screen()).open.find((o) => o.activityId === id)!.code;
+  const codeOf = async (id = '1') => (await screen()).open.find((o) => o.activityId === id)!.code;
   const people = async (n: number) => {
     const kits = await makeKits(t.app, n);
     return Promise.all(kits.map((k, i) => signedInAttendee(t.app, k, `p${i}`)));
@@ -31,7 +40,7 @@ describe('attendance feature', () => {
     const c2 = await codeOf();
     expect(c2).not.toBe(c1); // (1 in 531k chance of a false failure; secret is random per DB)
     // previous window's code still works
-    const r = await checkin(a!.jar, { code: c1.toLowerCase(), activityId: 'a1' });
+    const r = await checkin(a!.jar, { code: c1.toLowerCase(), activityId: '1' });
     expect(r.statusCode).toBe(200);
   });
 
@@ -56,7 +65,7 @@ describe('attendance feature', () => {
   });
 
   it('check-in awards points + sticker once; repeat is idempotent', async () => {
-    await open('a1', 'Opening');
+    await open('1', 'Opening');
     const [a] = await people(1);
     const before = t.ctx.points.total(a!.id);
     const r = await checkin(a!.jar, { code: await codeOf() });
@@ -64,30 +73,30 @@ describe('attendance feature', () => {
     expect(body).toMatchObject({ newlyCheckedIn: true, points: CHECKIN_POINTS, position: 1, count: 1, title: 'Opening' });
     expect(t.ctx.points.total(a!.id)).toBe(before + CHECKIN_POINTS);
     expect(t.ctx.stickers.unlockedBy(a!.id)['attendance-first']).toBeDefined();
-    const again = (await checkin(a!.jar, { code: await codeOf(), activityId: 'a1' })).json() as { newlyCheckedIn: boolean; points: number };
+    const again = (await checkin(a!.jar, { code: await codeOf(), activityId: '1' })).json() as { newlyCheckedIn: boolean; points: number };
     expect(again).toMatchObject({ newlyCheckedIn: false, points: 0 });
     expect(t.ctx.points.total(a!.id)).toBe(before + CHECKIN_POINTS);
   });
 
   it('positions count up; regular sticker at 3 check-ins', async () => {
     const [a, b] = await people(2);
-    for (const id of ['a1', 'a2', 'a3']) await open(id, `Act ${id}`);
-    await checkin(b!.jar, { code: await codeOf('a1'), activityId: 'a1' });
-    const r = (await checkin(a!.jar, { code: await codeOf('a1'), activityId: 'a1' })).json() as { position: number };
+    for (const id of ['1', '2', '3']) await open(id, `Act ${id}`);
+    await checkin(b!.jar, { code: await codeOf('1'), activityId: '1' });
+    const r = (await checkin(a!.jar, { code: await codeOf('1'), activityId: '1' })).json() as { position: number };
     expect(r.position).toBe(2);
-    await checkin(a!.jar, { code: await codeOf('a2'), activityId: 'a2' });
+    await checkin(a!.jar, { code: await codeOf('2'), activityId: '2' });
     expect(t.ctx.stickers.unlockedBy(a!.id)['attendance-regular']).toBeUndefined();
-    await checkin(a!.jar, { code: await codeOf('a3'), activityId: 'a3' });
+    await checkin(a!.jar, { code: await codeOf('3'), activityId: '3' });
     expect(t.ctx.stickers.unlockedBy(a!.id)['attendance-regular']).toBeDefined();
   });
 
   it('without activityId the code finds its own open check-in; a code for A does not work for B', async () => {
-    await open('a1', 'One');
-    await open('a2', 'Two');
+    await open('1', 'One');
+    await open('2', 'Two');
     const [a] = await people(1);
-    const r = (await checkin(a!.jar, { code: await codeOf('a2') })).json() as { activityId: string };
-    expect(r.activityId).toBe('a2');
-    const wrong = await checkin(a!.jar, { code: await codeOf('a1'), activityId: 'a2' });
+    const r = (await checkin(a!.jar, { code: await codeOf('2') })).json() as { activityId: string };
+    expect(r.activityId).toBe('2');
+    const wrong = await checkin(a!.jar, { code: await codeOf('1'), activityId: '2' });
     expect(wrong.statusCode).toBe(400);
   });
 
@@ -95,16 +104,37 @@ describe('attendance feature', () => {
     await open();
     const [a] = await people(1);
     const code = await codeOf();
-    await req(t.app, admin, 'POST', '/api/attendance/admin/close', { activityId: 'a1' });
-    expect((await checkin(a!.jar, { code, activityId: 'a1' })).statusCode).toBe(400);
+    await req(t.app, admin, 'POST', '/api/attendance/admin/close', { activityId: '1' });
+    expect((await checkin(a!.jar, { code, activityId: '1' })).statusCode).toBe(400);
     expect((await checkin(a!.jar, { code: 'ACDE', activityId: 'nope' })).statusCode).toBe(400);
     // re-open works and keeps history
     await open();
     expect((await checkin(a!.jar, { code: await codeOf() })).statusCode).toBe(200);
   });
 
+  it('only schedule activities can open a check-in; the title defaults to the schedule title', async () => {
+    expect((await open('99')).statusCode).toBe(404);
+    expect((await open('a1')).statusCode).toBe(404);
+    const r = await req(t.app, admin, 'POST', '/api/attendance/admin/open', { activityId: '2' });
+    expect(r.statusCode).toBe(200);
+    expect((r.json() as { title: string }).title).toBe('Act 2');
+  });
+
+  it('seed uses real schedule activities', async () => {
+    await t.close();
+    t = await makeApp();
+    const { schedule } = await import('../schedule');
+    const { attendance } = await import('./index');
+    await schedule.seed!(t.ctx);
+    await attendance.seed!(t.ctx);
+    const ids = new Set(t.ctx.db.prepare('SELECT id FROM schedule_activities').all().map((r) => String((r as { id: number }).id)));
+    const windows = t.ctx.db.prepare('SELECT activity_id FROM attendance_windows').all() as { activity_id: string }[];
+    expect(windows).toHaveLength(3);
+    for (const w of windows) expect(ids.has(w.activity_id)).toBe(true);
+  });
+
   it('auto-closes at closesAt on the tick', async () => {
-    await open('a1', 'Opening', { closesAt: t.clock.now() + 60_000 });
+    await open('1', 'Opening', { closesAt: t.clock.now() + 60_000 });
     const [a] = await people(1);
     const code = await codeOf();
     t.clock.advance(61_000);
@@ -170,7 +200,7 @@ describe('attendance feature', () => {
     await checkin(b!.jar, { code: await codeOf() });
     tick(t.ctx);
     tick(t.ctx);
-    expect(everyone.events.filter((e) => e.type === 'attendance.counts').map((e) => e.data)).toEqual([{ counts: { a1: 2 } }]);
+    expect(everyone.events.filter((e) => e.type === 'attendance.counts').map((e) => e.data)).toEqual([{ counts: { '1': 2 } }]);
     const arr = proj.events.filter((e) => e.type === 'attendance.arrivals');
     expect(arr).toHaveLength(1);
     expect((arr[0]!.data as { names: string[] }).names).toEqual(['p0', 'p1']);
@@ -184,21 +214,21 @@ describe('attendance feature', () => {
   });
 
   it('console: overview, searchable lists, manual check-in, guards', async () => {
-    await open('a1', 'Opening');
+    await open('1', 'Opening');
     const ppl = await people(3);
     await checkin(ppl[0]!.jar, { code: await codeOf() });
     const ov = (await req(t.app, admin, 'GET', '/api/attendance/admin/overview')).json() as { eventCount: number; windows: { count: number; open: boolean }[] };
     expect(ov.eventCount).toBe(3);
     expect(ov.windows[0]).toMatchObject({ count: 1, open: true });
-    const list = (await req(t.app, admin, 'GET', '/api/attendance/admin/activity/a1')).json() as { total: number; rows: { nickname: string }[] };
+    const list = (await req(t.app, admin, 'GET', '/api/attendance/admin/activity/1')).json() as { total: number; rows: { nickname: string }[] };
     expect(list).toMatchObject({ total: 1 });
     const ev = (await req(t.app, admin, 'GET', '/api/attendance/admin/event?q=p2')).json() as { total: number; rows: { nickname: string; checkins: number }[] };
     expect(ev.total).toBe(1);
     expect(ev.rows[0]!.nickname).toBe('p2');
     expect(((await req(t.app, admin, 'GET', '/api/attendance/admin/event?q=%25')).json() as { total: number }).total).toBe(0); // % is literal
-    const m = await req(t.app, admin, 'POST', '/api/attendance/admin/activity/a1/checkin', { attendeeId: ppl[1]!.id });
+    const m = await req(t.app, admin, 'POST', '/api/attendance/admin/activity/1/checkin', { attendeeId: ppl[1]!.id });
     expect(m.statusCode).toBe(200);
-    expect(t.ctx.points.has(ppl[1]!.id, 'attendance', 'checkin:a1')).toBe(true);
+    expect(t.ctx.points.has(ppl[1]!.id, 'attendance', 'checkin:1')).toBe(true);
     for (const [method, url] of [
       ['GET', '/api/attendance/admin/overview'],
       ['GET', '/api/attendance/admin/event'],
@@ -211,7 +241,7 @@ describe('attendance feature', () => {
   });
 
   it('CSV export has proper headers, BOM, quoting and formula neutralising', async () => {
-    await open('a1', 'Opening, "big" one');
+    await open('1', 'Opening, "big" one');
     const kits = await makeKits(t.app, 1);
     const a = await signedInAttendee(t.app, kits[0]!, 'zed');
     t.ctx.db.exec(`UPDATE attendees SET name = '=HYPERLINK("x")' WHERE id = ${a.id}`);
@@ -224,7 +254,7 @@ describe('attendance feature', () => {
     expect(lines[0]).toBe('kit_id,name,roll,nickname,signed_in_at,activity_checkins');
     expect(lines[1]).toContain(`"'=HYPERLINK(""x"")"`);
     expect(lines[1]!.endsWith(',1')).toBe(true);
-    const ac = await req(t.app, admin, 'GET', '/api/attendance/admin/export/activity/a1.csv');
+    const ac = await req(t.app, admin, 'GET', '/api/attendance/admin/export/activity/1.csv');
     expect(ac.statusCode).toBe(200);
     expect(ac.body).toContain('"Opening, ""big"" one"');
     expect((await req(t.app, admin, 'GET', '/api/attendance/admin/export/activity/zzz.csv')).statusCode).toBe(404);
@@ -235,6 +265,7 @@ describe('attendance feature', () => {
     await t.close();
     t = await makeApp({ env: { LOGIN_IP_PER_MIN: '100000' } });
     admin = await adminJar(t.app);
+    await activities();
     await open();
     const kits = await makeKits(t.app, 300);
     const ppl = await Promise.all(kits.map((k, i) => signedInAttendee(t.app, k, `n${i}`)));

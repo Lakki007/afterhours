@@ -1,7 +1,7 @@
 // Per-activity check-in (spec 5.2). Event attendance itself is core's first sign-in.
 import { z } from 'zod';
 
-/** Activities belong to the schedule feature; we only ever hold their id. */
+/** Activities belong to the schedule feature; we hold their id as a string ("12"). The server checks it exists. */
 export const ActivityIdSchema = z.string().trim().min(1).max(64);
 
 /** Code characters: no 0/O, 1/I/L, 5/S, B/8 confusion. 4 chars, case-insensitive on input. */
@@ -83,8 +83,8 @@ export type ScreenCheckins = z.infer<typeof ScreenCheckinsSchema>;
 /** Console. */
 export const OpenCheckinRequestSchema = z.object({
   activityId: ActivityIdSchema,
-  /** Shown on the projector and in exports. The console takes it from the schedule. */
-  title: z.string().trim().min(1).max(120),
+  /** Shown on the projector and in exports. Defaults to the schedule activity's title. */
+  title: z.string().trim().min(1).max(120).optional(),
   /** Optional auto-close, epoch ms. */
   closesAt: z.number().int().nullable().optional(),
 });
