@@ -15,7 +15,7 @@ import type { SceneStatus } from '../../core/feature';
 import { scenes as registered, screenOverlays } from '../../core/featureHost';
 import { useLiveEvent } from '../../core/live';
 import { qk } from '../../core/queries';
-import { Doodle, LoadingState } from '../../kit';
+import { Doodle, LoadingState, RecurseLogo } from '../../kit';
 import { JOIN_SCENE_ID, JoinScene } from './JoinScene';
 import s from './screen.module.css';
 
@@ -91,6 +91,8 @@ export function SceneHost() {
         ))}
         {pinned && <Doodle name="pin" size={26} fill="var(--tangerine)" stroke="var(--paper)" className={s.pinned} title="pinned by the console" />}
       </ol>
+
+      {current.id !== JOIN_SCENE_ID && <RecurseLogo on="dark" height={44} className={s.bug} />}
 
       {screenOverlays.map((f) => (f.ScreenOverlay ? <f.ScreenOverlay key={f.name} /> : null))}
     </div>

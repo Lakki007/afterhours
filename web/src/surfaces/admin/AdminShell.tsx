@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router';
 import { consolePanels } from '../../core/featureHost';
 import { useStaffSignOut } from '../../core/queries';
-import { Button, Doodle, EmptyState, type IconName, LoadingState, type Tone } from '../../kit';
+import { Button, Doodle, EmptyState, type IconName, LoadingState, RecurseLogo, type Tone } from '../../kit';
 import { Wordmark } from '../shared/Wordmark';
 import s from './admin.module.css';
 import { KitsPanel } from './KitsPanel';
@@ -32,6 +32,7 @@ export function AdminShell() {
       <aside className={s.side}>
         <div className={s.brand}>
           <Wordmark size={34} />
+          <RecurseLogo height={26} />
           <p className={s.brandNote}>organiser console</p>
         </div>
         <nav className={s.nav} aria-label="console">

@@ -17,6 +17,8 @@ export default defineConfig({
       manifest: false,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest}'],
+        // iOS reads launch images itself at install time; no need to make every phone download them.
+        globIgnores: ['**/icons/splash-*.png'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       devOptions: { enabled: false },

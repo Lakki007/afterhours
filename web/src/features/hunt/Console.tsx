@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { api } from '../../core/api';
 import { useLiveEvent } from '../../core/live';
 import { fmtElapsed } from '../../core/time';
-import { Button, IconButton, Meter, Qr, Sheet, TextArea, TextField, useToast } from '../../kit';
+import { Button, IconButton, Meter, Qr, RecurseLogo, Sheet, TextArea, TextField, useToast } from '../../kit';
 import { Section, Stamp, Stat, ui } from '../common/ui';
 import s from './hunt.module.css';
 
@@ -142,6 +142,7 @@ function StickerSheet({ onClose }: { onClose: () => void }) {
       <div className={s.sheet}>
         {q.data?.stops.map((st) => (
           <div key={st.stopId} className={s.sticker}>
+            <RecurseLogo height={18} />
             <Qr text={st.url} size={180} label={`QR for ${st.title}`} />
             <span className={s.stickerCode}>{st.code}</span>
             <span className={s.stickerTitle}>

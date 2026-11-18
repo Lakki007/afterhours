@@ -5,7 +5,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'test-results/**', 'playwright-report/**', 'web/dev-dist/**'],
+    ignores: ['**/dist/**', '**/node_modules/**', '.claude/**', '.playwright/**', 'test-results/**', 'playwright-report/**', 'web/dev-dist/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -28,7 +28,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['server/**/*.ts', 'scripts/**/*.mjs', 'server/scripts/**/*.mjs', 'e2e/**/*.ts', '*.config.{js,ts}'],
+    files: ['server/**/*.ts', 'scripts/**/*.mjs', 'server/scripts/**/*.mjs', 'e2e/**/*.{ts,mjs}', '*.config.{js,ts}'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
   },

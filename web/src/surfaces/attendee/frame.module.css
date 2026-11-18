@@ -1,0 +1,28 @@
+.splash { min-height: 100dvh; display: grid; place-items: center; align-content: center; gap: var(--s-5); }
+.splashIcon { width: 112px; height: 112px; border-radius: 28px; box-shadow: 6px 8px 0 var(--ink); }
+
+/* Only on wide screens: a paper note beside the phone column. */
+.aside { display: none; }
+@media (min-width: 1000px) {
+  .aside {
+    position: fixed;
+    z-index: 1;
+    top: 50%;
+    left: calc(50% + 250px);
+    width: 290px;
+    translate: 0 -50%;
+    display: grid;
+    gap: var(--s-3);
+    justify-items: start;
+    padding: var(--s-5);
+    background: var(--paper-3);
+    border: var(--outline);
+    border-radius: var(--cut-1);
+    box-shadow: var(--shadow-lg);
+    rotate: 1.5deg;
+  }
+}
+.asideTitle { font-size: var(--step-3); line-height: 1; transform: rotate(-1.5deg); text-shadow: 3px 3px 0 var(--sun); }
+.asideText { font-family: var(--font-hand); font-weight: 600; color: var(--ink-soft); }
+.qr { padding: 10px; background: var(--paper-3); border: var(--outline); border-radius: var(--cut-3); justify-self: center; }
+.asideHost { font-family: var(--font-display); justify-self: center; overflow-wrap: anywhere; }

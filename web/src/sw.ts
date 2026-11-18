@@ -39,7 +39,7 @@ self.addEventListener('push', (event) => {
       body: data.body ?? '',
       tag: data.tag,
       icon: '/icons/icon-192.png',
-      badge: '/icons/favicon-32.png',
+      badge: '/icons/badge-96.png',
       data: { url: data.url && data.url.startsWith('/') ? data.url : '/' },
     }),
   );

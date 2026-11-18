@@ -10,6 +10,7 @@ import { isApiError } from '../../core/api';
 import { useSignIn } from '../../core/queries';
 import { celebrate, Draggy, haptics, sfx } from '../../fun';
 import { Button, Card, Doodle, Mascot, TextField } from '../../kit';
+import { ByRecurse } from '../../kit/Brand';
 import { Wordmark } from '../shared/Wordmark';
 import s from './attendee.module.css';
 
@@ -86,6 +87,9 @@ export function SignIn() {
 
       <header className={s.signinHead}>
         <Wordmark size={66} />
+        <div className={s.lockup}>
+          <ByRecurse height={30} />
+        </div>
         <div className={s.byline}>
           <Mascot size={62} />
           <p className={s.bylineText}>

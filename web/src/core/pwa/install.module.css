@@ -17,3 +17,18 @@
 }
 .stepArt { display: inline-block; vertical-align: middle; margin-left: 8px; transform: rotate(8deg); }
 .note { font-family: var(--font-hand); font-weight: 600; margin-bottom: var(--s-4); color: var(--ink-soft); }
+
+/* the drawn iPhone in the explainer */
+.pic { display: flex; align-items: center; justify-content: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+.phone { width: 112px; height: 196px; display: grid; grid-template-rows: auto 1fr auto; background: var(--paper-3); border: var(--line-fat) solid var(--ink); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.phone:last-child { transform: rotate(3deg); grid-template-rows: 1fr; }
+.phone:first-child { transform: rotate(-3deg); }
+.phoneBar { font-size: 10px; font-weight: 800; text-align: center; padding: 6px 4px; border-bottom: var(--line-thin) solid var(--ink); background: var(--paper-2); }
+.phoneBody { display: grid; place-items: center; }
+.phoneTools { display: flex; justify-content: space-around; align-items: center; padding: 6px 0; border-top: var(--line-thin) solid var(--ink); background: var(--paper-2); }
+.phoneTools span:not(.shareHi) { width: 14px; height: 4px; background: var(--ink); border-radius: 2px; }
+.shareHi { display: grid; place-items: center; width: 34px; height: 34px; background: var(--sun); border: var(--line-thin) solid var(--ink); border-radius: 50%; }
+.homeGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 10px; align-content: start; background: var(--sky); }
+.homeGrid > span:not(.appIcon) { aspect-ratio: 1; background: var(--paper-3); border: var(--line-thin) solid var(--ink); border-radius: 10px; opacity: 0.7; }
+.appIcon { display: grid; justify-items: center; gap: 2px; }
+.appIcon small { font-size: 9px; font-weight: 800; }

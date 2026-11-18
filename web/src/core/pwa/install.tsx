@@ -7,6 +7,7 @@
 */
 import { useSyncExternalStore, useState } from 'react';
 import { Button, Card, Doodle, Sheet } from '../../kit';
+import { RecurseIcon, RecurseLogo } from '../../kit/Brand';
 import { sfx } from '../../fun/sfx';
 import s from './install.module.css';
 
@@ -95,6 +96,7 @@ export function useInstall(): InstallState {
 export function InstallHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Sheet open={open} onClose={onClose} title="put it on your home screen">
+      <IosPicture />
       <ol className={s.steps}>
         <li>
           <span className={s.stepNum}>1</span>
@@ -129,6 +131,39 @@ export function InstallHelp({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
+/** A drawn iPhone: Safari's share button at the bottom, then the new icon on the home screen. */
+function IosPicture() {
+  return (
+    <div className={s.pic} aria-hidden="true">
+      <div className={s.phone}>
+        <div className={s.phoneBar}>{typeof location === 'undefined' ? '' : location.host}</div>
+        <div className={s.phoneBody}>
+          <RecurseLogo height={18} />
+        </div>
+        <div className={s.phoneTools}>
+          <span />
+          <span className={s.shareHi}>
+            <Doodle name="share" size={22} />
+          </span>
+          <span />
+        </div>
+      </div>
+      <Doodle name="arrow" size={40} />
+      <div className={s.phone}>
+        <div className={s.homeGrid}>
+          <span />
+          <span />
+          <span className={s.appIcon}>
+            <RecurseIcon size={34} />
+            <small>After Hours</small>
+          </span>
+          <span />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Home-screen card. Renders nothing when installed, dismissed or unsupported. */
 export function InstallCard() {
   const inst = useInstall();
@@ -146,7 +181,7 @@ export function InstallCard() {
   return (
     <Card tone="sky" tilt={-1} tape tapeColor="sun" halftone>
       <div className={s.card}>
-        <Doodle name="phone" size={44} fill="var(--paper-3)" strokeWidth={2.4} />
+        <RecurseIcon size={52} />
         <div className={s.cardText}>
           <h3 className={s.cardTitle}>keep me on your home screen</h3>
           <p>opens faster, works on bad wifi, and unlocks alerts.</p>

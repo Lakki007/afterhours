@@ -12,6 +12,7 @@ import { InstallCard } from '../../core/pwa/install';
 import { useMyPoints, usePresence, useSignOut, useStickerBook } from '../../core/queries';
 import { haptics, sfx, useMuted } from '../../fun';
 import { Avatar, Card, Doodle, EmptyState, IconButton, NumberTicker, Sheet, Sticker, Torn } from '../../kit';
+import { MadeByRecurse, RecurseLogo } from '../../kit/Brand';
 import s from './attendee.module.css';
 
 const HELLOS = ['hey,', 'oh hi,', 'sup,', 'yo,', 'hello,'];
@@ -37,6 +38,9 @@ function Greeting({ me }: { me: MeResponse }) {
     <Torn tone="sun" className={s.greet}>
       <div className={s.greetRow}>
         <div>
+          <span className={s.homeMark}>
+            <RecurseLogo height={20} />
+          </span>
           <p className={s.hello}>{hello}</p>
           <h1 className={s.nick}>{nick}</h1>
         </div>
@@ -185,6 +189,7 @@ export function Home({ me }: { me: MeResponse }) {
         <button type="button" className={s.signout} onClick={() => signOut.mutate()}>
           not {me.attendee.nickname ?? 'you'}? sign out
         </button>
+        <MadeByRecurse />
       </div>
     </div>
   );

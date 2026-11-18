@@ -1,6 +1,6 @@
 /* The default projector scene: how to get in. The app URL as a big QR. */
 import { Draggy } from '../../fun';
-import { Card, Doodle, NumberTicker, Qr, Scribble } from '../../kit';
+import { ByRecurse, Card, Doodle, NumberTicker, Qr, Scribble } from '../../kit';
 import { useAppConfig, usePresence } from '../../core/queries';
 import { Wordmark } from '../shared/Wordmark';
 import s from './screen.module.css';
@@ -17,6 +17,7 @@ export function JoinScene() {
     <div className={s.join}>
       <div className={s.joinLeft}>
         <Wordmark size={px * 1.05} />
+        <ByRecurse on="dark" height={Math.round(px * 0.75)} />
         <h2 className={s.joinHead}>
           grab your phone.
           <Scribble color="var(--pink)" className={s.joinScribble} />

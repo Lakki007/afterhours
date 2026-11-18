@@ -46,6 +46,8 @@
 .floatC { top: 560px; right: 22px; transform: rotate(10deg); }
 .floatD { bottom: 28px; left: 18px; transform: rotate(-8deg) scaleX(-1); }
 .signinHead { position: relative; z-index: 1; display: grid; gap: var(--s-3); }
+.lockup { justify-self: start; padding: 4px 16px; background: var(--paper-3); border: var(--outline); border-radius: var(--cut-3); box-shadow: var(--shadow-sm); transform: rotate(-1.5deg); }
+.homeMark { display: inline-flex; padding: 3px 8px; background: var(--paper-3); border: var(--line-thin) solid var(--ink); border-radius: var(--cut-3); transform: rotate(-2deg); margin-bottom: var(--s-2); }
 .byline { display: flex; align-items: center; gap: var(--s-3); max-width: 300px; }
 .bylineText {
   font-family: var(--font-hand);
@@ -263,3 +265,14 @@
 .slotTitleLocked { font-family: var(--font-hand); font-weight: 700; color: var(--ink-soft); font-size: var(--step--1); }
 .stickerDetail { display: grid; justify-items: center; gap: var(--s-3); text-align: center; padding: var(--s-3) 0; }
 .detailHint { font-family: var(--font-hand); font-weight: 700; font-size: var(--step-1); max-width: 24ch; }
+
+/* ---- laptop: the phone column reads as a phone on the desk ------------- */
+@media (min-width: 900px) {
+  .shell,
+  .signin,
+  .profile {
+    border-inline: var(--outline);
+    box-shadow: 8px 0 0 var(--ink);
+    background-color: var(--paper);
+  }
+}

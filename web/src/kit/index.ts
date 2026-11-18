@@ -14,3 +14,4 @@ export { Sticker, type StickerProps } from './Sticker';
 export { EmptyState, LoadingState, ErrorState } from './States';
 export { Tabs, type TabItem } from './Tabs';
 export { ToastProvider, useToast, type ToastOptions } from './Toast';
+export { ByRecurse, MadeByRecurse, RecurseIcon, RecurseLogo } from './Brand';
